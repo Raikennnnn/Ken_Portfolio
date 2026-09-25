@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useRef, useEffect, useState, useMemo } from "react";
+import { Suspense, useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, Float, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
-// ── Cursor tracker — smoothly follows mouse position ──
+// ── Cursor tracker — responsive mouse following ──
 function useCursorTracker() {
   const mouse = useRef(new THREE.Vector2(0, 0));
   const smoothed = useRef(new THREE.Vector2(0, 0));
@@ -23,37 +23,53 @@ function useCursorTracker() {
     smoothed.current.x = THREE.MathUtils.lerp(
       smoothed.current.x,
       mouse.current.x,
-      0.04
+      0.08 // faster response
     );
     smoothed.current.y = THREE.MathUtils.lerp(
       smoothed.current.y,
       mouse.current.y,
-      0.04
+      0.08
     );
   });
 
   return smoothed;
 }
 
-// ── Scroll offset tracker ──
-function useScrollOffset() {
-  const offset = useRef(0);
+// ── Scroll-based opacity (fade out, don't move) ──
+function useScrollFade() {
+  const opacity = useRef(1);
 
   useEffect(() => {
     const onScroll = () => {
-      offset.current = window.scrollY / window.innerHeight;
+      const scrollY = window.scrollY;
+      const viewH = window.innerHeight;
+      // Start fading at 20% scroll, fully gone by 80%
+      opacity.current = THREE.MathUtils.clamp(1 - (scrollY / viewH) * 1.5, 0, 1);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  return offset;
+  return opacity;
+}
+
+// ── Click pulse state shared across components ──
+function useClickPulse() {
+  const pulse = useRef(0);
+  const active = useRef(false);
+
+  const trigger = useCallback(() => {
+    pulse.current = 1;
+    active.current = true;
+  }, []);
+
+  return { pulse, active, trigger };
 }
 
 // ── Ambient floating particles around the character ──
-function AmbientParticles() {
+function AmbientParticles({ scrollFade }: { scrollFade: React.MutableRefObject<number> }) {
   const meshRef = useRef<THREE.Points>(null);
-  const count = 60;
+  const count = 80;
 
   const [positions, speeds] = useMemo(() => {
     const pos = new Float32Array(count * 3);
@@ -81,6 +97,10 @@ function AmbientParticles() {
       );
     }
     posAttr.needsUpdate = true;
+
+    // Fade particles with scroll
+    const mat = meshRef.current.material as THREE.PointsMaterial;
+    mat.opacity = 0.5 * scrollFade.current;
   });
 
   return (
@@ -94,10 +114,10 @@ function AmbientParticles() {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.03}
+        size={0.035}
         color="#22d3ee"
         transparent
-        opacity={0.4}
+        opacity={0.5}
         sizeAttenuation
         blending={THREE.AdditiveBlending}
         depthWrite={false}
@@ -106,28 +126,74 @@ function AmbientParticles() {
   );
 }
 
-// ── Character model ──
-function CharacterModel() {
+// ── Glitch ring effect on click ──
+function GlitchRing({ pulse, active }: { pulse: React.MutableRefObject<number>; active: React.MutableRefObject<boolean> }) {
+  const ringRef = useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    if (!ringRef.current || !active.current) return;
+
+    pulse.current *= 0.94; // decay
+    const s = 1 + pulse.current * 3;
+    ringRef.current.scale.set(s, s, s);
+
+    const mat = ringRef.current.material as THREE.MeshBasicMaterial;
+    mat.opacity = pulse.current * 0.8;
+
+    if (pulse.current < 0.01) {
+      active.current = false;
+      ringRef.current.scale.set(1, 1, 1);
+      mat.opacity = 0;
+    }
+  });
+
+  return (
+    <mesh ref={ringRef} position={[0, 0, 0]}>
+      <ringGeometry args={[1.2, 1.4, 32]} />
+      <meshBasicMaterial
+        color="#22d3ee"
+        transparent
+        opacity={0}
+        side={THREE.DoubleSide}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+// ── Character model with full interactivity ──
+function CharacterModel({
+  scrollFade,
+  pulse,
+  active,
+}: {
+  scrollFade: React.MutableRefObject<number>;
+  pulse: React.MutableRefObject<number>;
+  active: React.MutableRefObject<boolean>;
+}) {
   const { scene } = useGLTF("/models/character.glb");
   const groupRef = useRef<THREE.Group>(null);
   const cursor = useCursorTracker();
-  const scrollOffset = useScrollOffset();
   const baseY = useRef(0);
+  const hovered = useRef(false);
+  const glowIntensity = useRef(0);
 
   // Clone the scene so React Three Fiber can manage it
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
 
-    // Apply toon-like materials for the anime aesthetic
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
         if (mesh.material) {
           const mat = mesh.material as THREE.MeshStandardMaterial;
-          // Keep original colors but make them pop with some emissive
           if (mat.color) {
-            mat.roughness = 0.8;
-            mat.metalness = 0.1;
+            mat.roughness = 0.7;
+            mat.metalness = 0.15;
+            // Store original emissive for glow effect
+            if (!mat.emissive) mat.emissive = new THREE.Color(0, 0, 0);
+            mat.emissiveIntensity = 0;
           }
         }
         mesh.castShadow = true;
@@ -138,19 +204,17 @@ function CharacterModel() {
     return clone;
   }, [scene]);
 
-  // Find a good scale and position on mount
+  // Scale and position on mount
   useEffect(() => {
     if (!groupRef.current) return;
     const box = new THREE.Box3().setFromObject(clonedScene);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
 
-    // Scale to fit nicely — target ~4 units tall
     const targetHeight = 4;
     const scale = targetHeight / size.y;
     groupRef.current.scale.setScalar(scale);
 
-    // Center the model and place feet near the bottom
     groupRef.current.position.x = -center.x * scale;
     groupRef.current.position.z = -center.z * scale;
     baseY.current = -center.y * scale + (-size.y / 2) * scale + 0.2;
@@ -161,25 +225,78 @@ function CharacterModel() {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
 
-    // Subtle rotation following cursor
-    const targetRotY = cursor.current.x * 0.3;
+    // ── Responsive cursor-following rotation ──
+    const targetRotY = cursor.current.x * 0.7;
+    const targetRotX = cursor.current.y * -0.15;
+
     groupRef.current.rotation.y = THREE.MathUtils.lerp(
       groupRef.current.rotation.y,
       targetRotY,
+      0.06
+    );
+    groupRef.current.rotation.x = THREE.MathUtils.lerp(
+      groupRef.current.rotation.x,
+      targetRotX,
+      0.06
+    );
+
+    // ── Gentle idle breathing ──
+    const breathe = Math.sin(t * 1.2) * 0.02;
+    groupRef.current.position.y = baseY.current + breathe;
+
+    // ── Slight lateral sway following cursor ──
+    const targetX = cursor.current.x * 0.3;
+    groupRef.current.position.x = THREE.MathUtils.lerp(
+      groupRef.current.position.x,
+      targetX,
       0.03
     );
 
-    // Gentle idle breathing sway
-    const breathe = Math.sin(t * 1.2) * 0.02;
-    groupRef.current.position.y =
-      baseY.current + breathe - scrollOffset.current * 1.5;
+    // ── Scroll-based fade (opacity on all materials) ──
+    const fade = scrollFade.current;
+    groupRef.current.visible = fade > 0.01;
 
-    // Fade out as user scrolls
-    groupRef.current.visible = scrollOffset.current < 2;
+    // ── Hover glow + click pulse glow ──
+    const targetGlow = hovered.current ? 0.15 : 0;
+    glowIntensity.current = THREE.MathUtils.lerp(
+      glowIntensity.current,
+      targetGlow,
+      0.08
+    );
+
+    const clickGlow = active.current ? pulse.current * 0.4 : 0;
+    const totalGlow = glowIntensity.current + clickGlow;
+
+    clonedScene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        if (mat) {
+          // Apply scroll fade
+          mat.transparent = true;
+          mat.opacity = fade;
+          // Apply glow
+          mat.emissiveIntensity = totalGlow;
+          if (totalGlow > 0) {
+            mat.emissive = new THREE.Color("#22d3ee");
+          }
+        }
+      }
+    });
   });
 
   return (
-    <group ref={groupRef}>
+    <group
+      ref={groupRef}
+      onPointerOver={() => {
+        hovered.current = true;
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        hovered.current = false;
+        document.body.style.cursor = "default";
+      }}
+    >
       <primitive object={clonedScene} />
     </group>
   );
@@ -208,14 +325,18 @@ function Lighting() {
 // ── Main canvas component ──
 export function ModelCanvas() {
   const [mounted, setMounted] = useState(false);
+  const scrollFade = useScrollFade();
+  const { pulse, active, trigger } = useClickPulse();
+
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[2] pointer-events-none"
+      className="fixed inset-0 z-[2]"
       style={{ opacity: 0.9 }}
+      onClick={trigger}
     >
       <Canvas
         camera={{ position: [0, 0.5, 5.5], fov: 45 }}
@@ -226,9 +347,14 @@ export function ModelCanvas() {
         <Lighting />
         <Suspense fallback={null}>
           <Float speed={1.2} rotationIntensity={0.08} floatIntensity={0.3}>
-            <CharacterModel />
+            <CharacterModel
+              scrollFade={scrollFade}
+              pulse={pulse}
+              active={active}
+            />
           </Float>
-          <AmbientParticles />
+          <GlitchRing pulse={pulse} active={active} />
+          <AmbientParticles scrollFade={scrollFade} />
           <Environment preset="night" />
         </Suspense>
       </Canvas>
