@@ -2,18 +2,15 @@
 
 import { links, meta } from "@/content/data";
 import { useInView } from "@/lib/useInView";
+import { toggleTerminal } from "@/lib/avatarBus";
+import { SectionHeader } from "./SectionHeader";
 
 export function Contact() {
   const { ref, inView } = useInView();
 
   return (
-    <section id="contact" className="py-16 md:py-24" ref={ref}>
-      {/* Section header */}
-      <div className="section-header">
-        <span className="section-id">04</span>
-        <span className="section-label">Connect</span>
-        <div className="section-line" />
-      </div>
+    <section id="contact" className="py-16 md:py-24 scroll-mt-16" ref={ref}>
+      <SectionHeader id="05" label="Connect" />
 
       <div
         className={`grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-8 transition-all duration-700 ${
@@ -29,13 +26,17 @@ export function Contact() {
             Got a project, a question, or a CTF team that needs one more? Send a
             packet.
           </p>
-          <a
-            href={`mailto:${links[0]?.href.replace("mailto:", "")}`}
-            className="btn-cmd py-2.5 px-6"
-          >
-            <span className="prompt">$</span>{" "}
-            <span>init --handshake</span>
-          </a>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href={links.find((l) => l.href.startsWith("mailto:"))?.href}
+              className="btn-cmd py-2.5 px-6 border-[var(--border-active)] text-[var(--fg)]"
+            >
+              <span className="prompt">$</span> <span>init --handshake</span>
+            </a>
+            <button onClick={() => toggleTerminal(true)} className="btn-cmd py-2.5 px-5">
+              <span className="prompt">&gt;_</span> terminal
+            </button>
+          </div>
         </div>
 
         {/* Links */}
@@ -44,7 +45,7 @@ export function Contact() {
             <a
               key={l.label}
               href={l.href}
-              target={l.href.startsWith("mailto:") ? "_self" : "_blank"}
+              target={l.href.startsWith("mailto:") ? undefined : "_blank"}
               rel="noreferrer"
               className="flex items-center justify-between px-4 py-3.5 border border-[var(--border)] rounded-lg bg-[var(--bg-soft)] no-underline text-inherit transition-all duration-300 hover:border-[var(--border-active)] hover:shadow-[0_2px_16px_var(--accent-glow)] group"
             >
@@ -52,7 +53,7 @@ export function Contact() {
                 {l.label}
               </span>
               <span className="font-mono text-xs text-[var(--fg-soft)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-2">
-                {l.href 
+                {l.href
                   .replace(/^mailto:/, "")
                   .replace(/^https?:\/\//, "")
                   .replace(/\/$/, "")
@@ -70,9 +71,14 @@ export function Contact() {
       <div className="mt-20 pt-6 border-t border-[var(--border)]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 font-mono text-[10px] text-[var(--fg-muted)]">
           <span>{meta.copy}</span>
-          <span className="flex items-center gap-2">
-            Next.js + Three.js + Vercel
-            <span className="sec-dot" />
+          <span className="flex items-center gap-4">
+            <a href="/.well-known/security.txt" className="hover:text-[var(--accent)] transition-colors">
+              security.txt
+            </a>
+            <span className="flex items-center gap-2">
+              Next.js + Three.js + Vercel
+              <span className="sec-dot" />
+            </span>
           </span>
         </div>
       </div>

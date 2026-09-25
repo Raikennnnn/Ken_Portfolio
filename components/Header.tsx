@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toggleTerminal } from "@/lib/avatarBus";
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const [activeSection, setActiveSection] = useState("work");
+  const [activeSection, setActiveSection] = useState("top");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -23,13 +24,14 @@ export function Header() {
           }
         });
       },
-      { threshold: 0.25 }
+      // Only a thin band across the middle of the viewport counts as "current".
+      { rootMargin: "-45% 0px -54% 0px" }
     );
     sections.forEach((s) => observer.observe(s));
     return () => observer.disconnect();
   }, []);
 
-  const navItems = ["work", "skills", "about", "contact"];
+  const navItems = ["work", "skills", "activity", "about", "contact"];
 
   return (
     <header
@@ -42,10 +44,13 @@ export function Header() {
       <div className="mx-auto max-w-[1080px] px-5 md:px-10 flex items-center justify-between h-14">
         {/* Handle + badge */}
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs font-medium tracking-wider text-[var(--accent)]">
+          <a href="#top" className="font-mono text-xs font-medium tracking-wider text-[var(--accent)]">
             ken@sec
-          </span>
-          <span className="sec-badge">
+          </a>
+          <span
+            className="sec-badge"
+            title="Served with CSP, HSTS, X-Frame-Options, strict Referrer- and Permissions-Policy"
+          >
             <span className="sec-dot" />
             secure
           </span>
@@ -69,9 +74,10 @@ export function Header() {
         </nav>
 
         {/* CTA */}
-        <a href="#contact" className="btn-cmd">
-          <span className="prompt">$</span> connect
-        </a>
+        <button onClick={() => toggleTerminal(true)} className="btn-cmd" aria-label="Open terminal (Ctrl+K)">
+          <span className="prompt">&gt;_</span> terminal
+          <kbd className="kbd hidden sm:inline-flex">Ctrl K</kbd>
+        </button>
       </div>
     </header>
   );
