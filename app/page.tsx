@@ -13,8 +13,8 @@ export default function Page() {
       {/* Network topology background */}
       <NetworkCanvas />
 
-      {/* 3D model layer — hidden until model is added */}
-      {/* <ModelCanvas /> */}
+      {/* 3D character model layer */}
+      <ModelCanvas />
 
       <main className="mx-auto max-w-[1080px] px-5 md:px-10 relative z-10">
         <Header />
