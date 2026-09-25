@@ -1,22 +1,17 @@
 // =====================================================================
 //  PORTFOLIO CONTENT
 //  Edit this single file to update the entire site.
-//
-//  - To change your profile picture: replace /public/profile.jpg
-//    (or update `profile.image` below to point to a new path / URL).
-//  - To add a project: copy a block in the `projects` array.
-//  - To add a link: add an entry to `links`.
 // =====================================================================
 
 export type Project = {
-  index: string;        // "01", "02", ... shown as the row marker
+  index: string;
   title: string;
   year: string;
-  role: string;         // e.g. "Design + Build", "Engineering"
-  tags: string[];       // short tech / discipline tags
-  summary: string;      // one-liner shown on hover / expand
-  url?: string;         // optional live link
-  repo?: string;        // optional repo link
+  role: string;
+  tags: string[];
+  summary: string;
+  url?: string;
+  repo?: string;
 };
 
 export type SocialLink = {
@@ -24,67 +19,83 @@ export type SocialLink = {
   href: string;
 };
 
+export type Skill = {
+  name: string;
+  level: number; // 0-100, drives the animated bar
+  category: "language" | "framework" | "security";
+};
+
 export const profile = {
   name: "Ken",
-  handle: "@ken",
-  title: "Software Engineer",
-  location: "Earth",
-  // Path is relative to /public. Drop your photo there (e.g. /public/profile.jpg)
-  // and update this string. Defaults to a generated placeholder portrait.
-  image: "/profile.svg",
+  handle: "ken@sec",
+  title: "BSIT Cybersecurity",
+  tagline: "Securing systems. Building what's next.",
   bio: [
-    "I build small, sturdy things on the web.",
-    "Mostly product engineering — interfaces, systems, and the seams between them.",
-    "Currently exploring how tools shape the work they help us make.",
+    "I'm a BSIT Cybersecurity student with a deep interest in how things break — and how to make them harder to break.",
+    "I build full-stack applications with security baked in from the start, not bolted on after. My favourite work lives at the intersection of secure development and good user experience.",
+    "When I'm not studying protocols or writing code, I'm exploring game development, creative coding, and the occasional CTF challenge.",
   ],
-  available: true, // shows the green dot + "available" pill
+  available: true,
 };
 
 export const links: SocialLink[] = [
-  { label: "Email",     href: "mailto:hello@example.com" },
-  { label: "GitHub",    href: "https://github.com/Raikennnnn" },
-  { label: "LinkedIn",  href: "https://linkedin.com/in/yourhandle" },
-  { label: "Twitter",   href: "https://twitter.com/yourhandle" },
+  { label: "Email", href: "mailto:hello@example.com" },
+  { label: "GitHub", href: "https://github.com/Raikennnnn" },
+  { label: "LinkedIn", href: "https://linkedin.com/in/yourhandle" },
 ];
 
-// Add or remove projects freely. Order here = order on the page.
+export const skills: Skill[] = [
+  // Languages
+  { name: "TypeScript", level: 90, category: "language" },
+  { name: "Python", level: 75, category: "language" },
+  { name: "Lua", level: 72, category: "language" },
+  // Frameworks
+  { name: "React / Next.js", level: 88, category: "framework" },
+  { name: "Node.js", level: 85, category: "framework" },
+  { name: "Tailwind CSS", level: 92, category: "framework" },
+  // Security + Tools
+  { name: "Network Security", level: 78, category: "security" },
+  { name: "Linux / CLI", level: 82, category: "security" },
+  { name: "Git / CI-CD", level: 80, category: "security" },
+  { name: "Wireshark / Nmap", level: 70, category: "security" },
+];
+
 export const projects: Project[] = [
   {
     index: "01",
-    title: "Project Atlas",
+    title: "IntelliDocs",
     year: "2026",
-    role: "Design + Build",
-    tags: ["Next.js", "TypeScript", "Postgres"],
+    role: "Full Stack",
+    tags: ["TypeScript", "Next.js", "AI"],
     summary:
-      "A spatial editor for organising large research libraries. Real-time, collaborative, keyboard-first.",
-    url: "https://example.com",
-    repo: "https://github.com/Raikennnnn/atlas",
+      "Web-based student enrollment system with AI-assisted document verification. Streamlines the enrollment pipeline with intelligent form parsing and automated validation.",
+    repo: "https://github.com/Raikennnnn/IntelliDocs",
   },
   {
     index: "02",
-    title: "Field Notes",
-    year: "2025",
-    role: "Engineering",
-    tags: ["React Native", "SQLite"],
+    title: "Stonebound Factory",
+    year: "2026",
+    role: "Game Dev",
+    tags: ["Lua", "Roblox"],
     summary:
-      "Offline-first journaling app for fieldwork. Sync resolves conflicts via CRDTs.",
-    repo: "https://github.com/Raikennnnn/field-notes",
+      "Roll stones. Power machines. Build your fortune. A factory-automation game built on Roblox with custom physics and progression systems.",
+    repo: "https://github.com/Raikennnnn/stonebound-factory",
   },
   {
     index: "03",
-    title: "Lumen",
-    year: "2024",
-    role: "Solo",
-    tags: ["WebGL", "Audio"],
+    title: "Ken Portfolio",
+    year: "2026",
+    role: "Design + Dev",
+    tags: ["Next.js", "Three.js", "Tailwind"],
     summary:
-      "An ambient music visualiser that reacts to the room — generative, low-CPU, beautiful.",
-    url: "https://example.com",
+      "This site — a cybersecurity-themed portfolio with interactive elements, network visualizations, and scroll-driven animations.",
+    repo: "https://github.com/Raikennnnn/Ken_Portfolio",
   },
 ];
 
 export const meta = {
-  copy: `© ${new Date().getFullYear()} ${profile.name}. Built with care.`,
-  // Used in <head> for the document title + description
-  siteTitle: `${profile.name} — Portfolio`,
-  siteDescription: "A small portfolio of work and writing.",
+  copy: `© ${new Date().getFullYear()} Ken. All packets accounted for.`,
+  siteTitle: "Ken — Cybersecurity Portfolio",
+  siteDescription:
+    "BSIT Cybersecurity student. Securing systems, building what's next.",
 };

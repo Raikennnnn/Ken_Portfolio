@@ -3,39 +3,50 @@
 import { useState } from "react";
 import type { Project } from "@/content/data";
 
-export function ProjectRow({ project }: { project: Project }) {
+export function ProjectRow({
+  project,
+  delay = 0,
+}: {
+  project: Project;
+  delay?: number;
+}) {
   const [open, setOpen] = useState(false);
 
-  const primaryHref = project.url ?? project.repo;
-
   return (
-    <div className="border-b border-current/20">
+    <div
+      className="card-interactive mb-3"
+      style={{ transitionDelay: `${delay}ms` }}
+    >
       <button
         onClick={() => setOpen((o) => !o)}
-        className="grid w-full grid-cols-12 items-baseline gap-4 py-5 md:py-7 text-left group"
+        className="grid w-full items-center gap-4 p-[18px_20px] md:p-[20px_24px] text-left group"
+        style={{ gridTemplateColumns: "auto 1fr auto auto" }}
         aria-expanded={open}
       >
         {/* Index */}
-        <span className="col-span-2 md:col-span-1 font-mono text-xs opacity-50">
+        <span className="font-mono text-xs text-[var(--accent)] font-semibold opacity-60">
           {project.index}
         </span>
 
         {/* Title */}
-        <span className="col-span-10 md:col-span-5 font-serif text-2xl md:text-3xl tracking-tight transition-transform duration-500 group-hover:translate-x-2">
+        <span className="font-display text-[1.15rem] md:text-[1.3rem] font-semibold tracking-tight transition-colors duration-300 group-hover:text-[var(--accent)]">
           {project.title}
         </span>
 
         {/* Role */}
-        <span className="hidden md:block md:col-span-3 font-mono text-xs uppercase tracking-widest opacity-60">
+        <span className="hidden md:block font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--fg-muted)]">
           {project.role}
         </span>
 
-        {/* Year + chevron */}
-        <span className="col-span-12 md:col-span-3 flex items-center justify-end gap-3 font-mono text-xs uppercase tracking-widest opacity-60">
+        {/* Year + toggle */}
+        <span className="flex items-center gap-2.5 font-mono text-[10px] text-[var(--fg-muted)]">
           <span>{project.year}</span>
           <span
-            className="inline-block transition-transform duration-300"
-            style={{ transform: open ? "rotate(45deg)" : "rotate(0deg)" }}
+            className={`w-5 h-5 flex items-center justify-center border rounded text-[13px] text-[var(--accent)] transition-all duration-300 ${
+              open
+                ? "rotate-45 border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]"
+                : "border-[var(--border)]"
+            }`}
             aria-hidden
           >
             +
@@ -45,54 +56,48 @@ export function ProjectRow({ project }: { project: Project }) {
 
       {/* Expanded panel */}
       <div
-        className="grid grid-cols-12 gap-4 overflow-hidden transition-[max-height,opacity] duration-500 ease-out"
+        className="overflow-hidden transition-all duration-500 ease-out"
         style={{
-          maxHeight: open ? 400 : 0,
+          maxHeight: open ? 300 : 0,
           opacity: open ? 1 : 0,
         }}
       >
-        <div className="hidden md:block md:col-span-1" />
-        <div className="col-span-12 md:col-span-7 pb-8">
-          <p className="font-serif text-lg md:text-xl leading-relaxed opacity-90 mb-4">
-            {project.summary}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {project.tags.map((tag) => (
-              <span
-                key={tag}
-                className="font-mono text-[10px] uppercase tracking-widest border border-current/30 px-2 py-1 rounded-sm"
-              >
-                {tag}
-              </span>
-            ))}
+        <div className="px-5 md:px-6 pb-5 flex flex-col md:flex-row md:justify-between gap-4">
+          <div>
+            <p className="text-[0.95rem] text-[var(--fg-soft)] leading-[1.7] max-w-[520px] mb-2.5">
+              {project.summary}
+            </p>
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {project.tags.map((t) => (
+                <span key={t} className="tag">
+                  {t}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="col-span-12 md:col-span-4 pb-8 flex md:flex-col md:items-end gap-3 md:gap-2">
-          {project.url && (
-            <a
-              href={project.url}
-              target="_blank"
-              rel="noreferrer"
-              className="row-link font-mono text-xs uppercase tracking-widest"
-            >
-              live ↗
-            </a>
-          )}
-          {project.repo && (
-            <a
-              href={project.repo}
-              target="_blank"
-              rel="noreferrer"
-              className="row-link font-mono text-xs uppercase tracking-widest"
-            >
-              repo ↗
-            </a>
-          )}
-          {!project.url && !project.repo && primaryHref === undefined && (
-            <span className="font-mono text-xs uppercase tracking-widest opacity-40">
-              private
-            </span>
-          )}
+
+          <div className="flex gap-2 flex-shrink-0 items-start">
+            {project.url && (
+              <a
+                href={project.url}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-cmd text-[10px] py-1.5 px-3"
+              >
+                <span className="prompt">$</span> live
+              </a>
+            )}
+            {project.repo && (
+              <a
+                href={project.repo}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-cmd text-[10px] py-1.5 px-3"
+              >
+                <span className="prompt">$</span> repo
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>

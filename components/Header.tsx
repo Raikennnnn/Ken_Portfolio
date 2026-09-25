@@ -1,28 +1,78 @@
 "use client";
 
-import { profile } from "@/content/data";
-import { ThemeToggle } from "./ThemeToggle";
+import { useState, useEffect } from "react";
 
 export function Header() {
+  const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("work");
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Track which section is in view
+  useEffect(() => {
+    const sections = document.querySelectorAll("section[id]");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  const navItems = ["work", "skills", "about", "contact"];
+
   return (
-    <header className="flex items-center justify-between py-6 border-b border-current/20">
-      <div className="flex items-center gap-3">
-        <span className="font-mono text-xs uppercase tracking-widest">
-          {profile.handle}
-        </span>
-        {profile.available && (
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest opacity-70">
-            <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            available
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${
+        scrolled
+          ? "bg-[#060610]/85 backdrop-blur-2xl border-b border-[var(--border)]"
+          : "bg-transparent"
+      }`}
+    >
+      <div className="mx-auto max-w-[1080px] px-5 md:px-10 flex items-center justify-between h-14">
+        {/* Handle + badge */}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xs font-medium tracking-wider text-[var(--accent)]">
+            ken@sec
           </span>
-        )}
+          <span className="sec-badge">
+            <span className="sec-dot" />
+            secure
+          </span>
+        </div>
+
+        {/* Nav links */}
+        <nav className="hidden md:flex items-center">
+          {navItems.map((item) => (
+            <a
+              key={item}
+              href={`#${item}`}
+              className={`font-mono text-[11px] tracking-wider px-3.5 py-1.5 rounded transition-colors duration-250 ${
+                activeSection === item
+                  ? "text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"
+                  : "text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--accent-glow)]"
+              }`}
+            >
+              ./{item}
+            </a>
+          ))}
+        </nav>
+
+        {/* CTA */}
+        <a href="#contact" className="btn-cmd">
+          <span className="prompt">$</span> connect
+        </a>
       </div>
-      <nav className="flex items-center gap-6">
-        <a href="#work" className="font-mono text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition">work</a>
-        <a href="#about" className="font-mono text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition">about</a>
-        <a href="#contact" className="font-mono text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition">contact</a>
-        <ThemeToggle />
-      </nav>
     </header>
   );
 }
