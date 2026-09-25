@@ -39,9 +39,9 @@ export const profile = {
 };
 
 export const links: SocialLink[] = [
-  { label: "Email", href: "mailto:hello@example.com" },
+  { label: "Email", href: "torreskennethraichen@gmail.com" },
   { label: "GitHub", href: "https://github.com/Raikennnnn" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/kenneth-raichen-torres-b80176382/" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/kenneth-rt/" },
 ];
 
 export const skills: Skill[] = [
