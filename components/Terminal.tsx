@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { profile, projects, skills, links, certifications, writeups, projectsUsing } from "@/content/data";
 import { emitAvatar, onToggleTerminal, type AvatarAction } from "@/lib/avatarBus";
+import { SCAN_LINES, SCAN_STEP_MS } from "@/lib/scanLines";
 
 type Line = { id: number; node: ReactNode };
 
@@ -61,6 +62,8 @@ export function Terminal() {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
+  // Phones: fit the window into the visible area above the on-screen keyboard.
+  const [fit, setFit] = useState<{ top: number; height: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
@@ -95,7 +98,7 @@ export function Terminal() {
     emitAvatar({ type: "terminal", open });
     if (open) {
       lastFocus.current = document.activeElement as HTMLElement | null;
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -105,7 +108,24 @@ export function Terminal() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [lines]);
+  }, [lines, fit]);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!open || !vv) return setFit(null);
+    const update = () => {
+      if (window.innerWidth >= 640) return setFit(null);
+      const gap = 10;
+      setFit({ top: vv.offsetTop + gap, height: Math.max(180, vv.height - gap * 2) });
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [open]);
 
   const goto = (id: string) => {
     setOpen(false);
@@ -137,8 +157,10 @@ export function Terminal() {
         print(
           ...HELP.map(([c, d]) => (
             <span>
-              <span className="inline-block w-[210px] text-[var(--fg)]">{c}</span>
-              <Muted>{d}</Muted>
+              <span className="block sm:inline-block sm:w-[210px] text-[var(--fg)]">{c}</span>
+              <span className="block pl-3 sm:inline sm:pl-0">
+                <Muted>{d}</Muted>
+              </span>
             </span>
           ))
         );
@@ -230,8 +252,10 @@ export function Terminal() {
                 const used = projectsUsing(s.name).map((p) => p.title);
                 return (
                   <span>
-                    <span className="inline-block w-[210px] text-[var(--fg)]">  {s.name}</span>
-                    <Muted>{used.length ? used.join(", ") : s.context}</Muted>
+                    <span className="block sm:inline-block sm:w-[210px] text-[var(--fg)]">  {s.name}</span>
+                    <span className="block pl-3 sm:inline sm:pl-0">
+                      <Muted>{used.length ? used.join(", ") : s.context}</Muted>
+                    </span>
                   </span>
                 );
               })
@@ -274,6 +298,15 @@ export function Terminal() {
       case "nod":
         emitAvatar({ type: "action", action: cmd.toLowerCase() as AvatarAction });
         print(<Muted>avatar ← {cmd.toLowerCase()} <span className="text-[var(--green)]">ok</span></Muted>);
+        // The scan readout prints here — the avatar's HUD stays hidden while the terminal is open.
+        if (cmd.toLowerCase() === "scan") {
+          SCAN_LINES.forEach((line, i) =>
+            window.setTimeout(
+              () => print(line.includes("GRANTED") ? <span className="text-[var(--green)]">{line}</span> : <Muted>{line}</Muted>),
+              250 + i * SCAN_STEP_MS
+            )
+          );
+        }
         break;
 
       case "history":
@@ -369,13 +402,14 @@ export function Terminal() {
 
   return (
     <>
-      <div className="fixed inset-0 z-[45] bg-[#03030a]/70 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
+      <div className="fixed inset-0 z-[60] bg-[#03030a]/70 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Terminal"
-        className="terminal-window fixed z-[47] left-1/2 top-[12vh] w-[min(720px,calc(100vw-24px))] -translate-x-1/2"
-        onClick={() => inputRef.current?.focus()}
+        className="terminal-window fixed z-[62] left-1/2 top-[12vh] w-[min(720px,calc(100vw-24px))] -translate-x-1/2 flex flex-col"
+        style={fit ? { top: fit.top, height: fit.height } : undefined}
+        onClick={() => inputRef.current?.focus({ preventScroll: true })}
       >
         <div className="flex items-center gap-2 px-4 h-9 border-b border-[var(--border)]">
           <span className="w-2.5 h-2.5 rounded-full opacity-70 bg-[var(--red)]" />
@@ -391,7 +425,21 @@ export function Terminal() {
           </button>
         </div>
 
-        <div ref={scrollRef} className="h-[min(56vh,440px)] overflow-y-auto px-4 py-3 font-mono text-[12px] leading-[1.7] text-[var(--fg-soft)]">
+        <div className={`flex flex-col sm:flex-row ${fit ? "flex-1 min-h-0" : "h-[min(60vh,460px)]"}`}>
+        {/* Live viewport: the 3D companion flies in here while the terminal is open (Companion.tsx). */}
+        <div
+          className={`terminal-cam relative shrink-0 order-first sm:order-last border-b sm:border-b-0 sm:border-l border-[var(--border)] sm:w-[190px] sm:!h-auto ${fit ? "" : "h-[150px]"}`}
+          style={{ height: fit ? Math.round(Math.min(160, Math.max(120, fit.height * 0.3))) : undefined }}
+        >
+          <div id="terminal-avatar-slot" className="absolute inset-0" aria-hidden />
+          <span className="absolute top-2 left-3 flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+            <span className="sec-dot" /> ken.exe · live
+          </span>
+        </div>
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 font-mono text-[12px] leading-[1.7] text-[var(--fg-soft)]"
+        >
           {lines.map((l) => (
             <div key={l.id} className="whitespace-pre-wrap break-words">
               {l.node}
@@ -402,6 +450,9 @@ export function Terminal() {
               <Accent>guest@ken</Accent>
               <Muted>:~$</Muted>
             </span>
+            {/* Phones: the input is 16px so iOS Safari doesn't zoom on focus, then scaled
+                to 75% so it matches the 12px terminal text and the caret lines up. */}
+            <span className="flex-1 min-w-0 flex items-center overflow-hidden">
             <input
               ref={inputRef}
               value={input}
@@ -414,9 +465,12 @@ export function Terminal() {
               autoComplete="off"
               autoCapitalize="off"
               aria-label="Command"
-              className="flex-1 bg-transparent outline-none text-[var(--fg)] caret-[var(--accent)]"
+              enterKeyHint="send"
+              className="w-[133.334%] shrink-0 origin-left scale-75 sm:w-full sm:scale-100 bg-transparent outline-none leading-[1.7] text-[16px] sm:text-[12px] text-[var(--fg)] caret-[var(--accent)]"
             />
+            </span>
           </label>
+        </div>
         </div>
       </div>
     </>

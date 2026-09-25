@@ -141,7 +141,7 @@ export function Hero({
           </a>
           <button onClick={() => toggleTerminal(true)} className="btn-cmd py-2.5 px-5">
             <span className="prompt">&gt;_</span> open terminal
-            <kbd className="kbd ml-1">Ctrl K</kbd>
+            <kbd className="kbd ml-1 hidden sm:inline-flex">Ctrl K</kbd>
           </button>
           {profile.available && (
             <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--green)] ml-1">
@@ -152,7 +152,7 @@ export function Hero({
       </div>
 
       {/* The 3D companion is drawn here while the hero is on screen (see Companion.tsx). */}
-      <div className="relative h-[380px] md:h-[min(74vh,640px)]">
+      <div className="relative h-[480px] md:h-[min(74vh,640px)]">
         <div id="avatar-slot" className="absolute inset-0" aria-hidden />
         <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none">
           <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
