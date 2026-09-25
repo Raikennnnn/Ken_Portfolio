@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Float, Environment } from "@react-three/drei";
+import { useGLTF, useAnimations, Float, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
 // ── Cursor tracker — responsive mouse following ──
@@ -108,9 +108,7 @@ function AmbientParticles({ scrollFade }: { scrollFade: React.MutableRefObject<n
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={count}
-          array={positions}
-          itemSize={3}
+          args={[positions, 3]}
         />
       </bufferGeometry>
       <pointsMaterial
@@ -172,9 +170,11 @@ function CharacterModel({
   pulse: React.MutableRefObject<number>;
   active: React.MutableRefObject<boolean>;
 }) {
-  const { scene } = useGLTF("/models/character.glb");
+  const { scene, animations } = useGLTF("/models/character.glb");
+  const { viewport } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const cursor = useCursorTracker();
+  const baseX = useRef(0);
   const baseY = useRef(0);
   const hovered = useRef(false);
   const glowIntensity = useRef(0);
@@ -204,6 +204,18 @@ function CharacterModel({
     return clone;
   }, [scene]);
 
+  const { actions } = useAnimations(animations, clonedScene);
+
+  useEffect(() => {
+    const idle = actions.Idle;
+    if (!idle) return;
+
+    idle.reset().fadeIn(0.3).play();
+    return () => {
+      idle.stop();
+    };
+  }, [actions]);
+
   // Scale and position on mount
   useEffect(() => {
     if (!groupRef.current) return;
@@ -215,11 +227,12 @@ function CharacterModel({
     const scale = targetHeight / size.y;
     groupRef.current.scale.setScalar(scale);
 
-    groupRef.current.position.x = -center.x * scale;
+    baseX.current = viewport.width * 0.28 - center.x * scale;
+    groupRef.current.position.x = baseX.current;
     groupRef.current.position.z = -center.z * scale;
     baseY.current = -center.y * scale + (-size.y / 2) * scale + 0.2;
     groupRef.current.position.y = baseY.current;
-  }, [clonedScene]);
+  }, [clonedScene, viewport.width]);
 
   useFrame((state) => {
     if (!groupRef.current) return;
@@ -245,7 +258,7 @@ function CharacterModel({
     groupRef.current.position.y = baseY.current + breathe;
 
     // ── Slight lateral sway following cursor ──
-    const targetX = cursor.current.x * 0.3;
+    const targetX = baseX.current + cursor.current.x * 0.15;
     groupRef.current.position.x = THREE.MathUtils.lerp(
       groupRef.current.position.x,
       targetX,
