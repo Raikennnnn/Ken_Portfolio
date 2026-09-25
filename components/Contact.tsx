@@ -44,7 +44,7 @@ export function Contact() {
             <a
               key={l.label}
               href={l.href}
-              target="_blank"
+              target={l.href.startsWith("mailto:") ? "_self" : "_blank"}
               rel="noreferrer"
               className="flex items-center justify-between px-4 py-3.5 border border-[var(--border)] rounded-lg bg-[var(--bg-soft)] no-underline text-inherit transition-all duration-300 hover:border-[var(--border-active)] hover:shadow-[0_2px_16px_var(--accent-glow)] group"
             >
