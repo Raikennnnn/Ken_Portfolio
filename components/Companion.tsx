@@ -335,9 +335,16 @@ function Character({ shared }: { shared: React.MutableRefObject<Shared> }) {
 
     // ── Place the character over its DOM rect ──
     const { bodyH, feetY, cx } = bodyMetrics(s);
-    const wpp = VISIBLE_H / vh;
+    // Map from the canvas's own on-screen box, not the window: with the iOS keyboard up,
+    // fixed elements get shifted and the canvas may no longer sit at (0, 0).
+    const cr = state.gl.domElement.getBoundingClientRect();
+    const wpp = VISIBLE_H / (cr.height || vh);
     const bob = s.reducedMotion ? 0 : Math.sin(time * 1.3) * 0.006;
-    outer.current.position.set((cx - vw / 2) * wpp, -(feetY - vh / 2) * wpp, 0);
+    outer.current.position.set(
+      (cx - cr.left - cr.width / 2) * wpp,
+      -(feetY - cr.top - cr.height / 2) * wpp,
+      0
+    );
     outer.current.scale.setScalar(bodyH * wpp);
     if (inner.current) inner.current.position.y = normalise.offset.y * normalise.scale + bob;
 

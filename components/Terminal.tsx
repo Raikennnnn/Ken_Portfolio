@@ -98,7 +98,7 @@ export function Terminal() {
     emitAvatar({ type: "terminal", open });
     if (open) {
       lastFocus.current = document.activeElement as HTMLElement | null;
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -409,7 +409,7 @@ export function Terminal() {
         aria-label="Terminal"
         className="terminal-window fixed z-[62] left-1/2 top-[12vh] w-[min(720px,calc(100vw-24px))] -translate-x-1/2 flex flex-col"
         style={fit ? { top: fit.top, height: fit.height } : undefined}
-        onClick={() => inputRef.current?.focus()}
+        onClick={() => inputRef.current?.focus({ preventScroll: true })}
       >
         <div className="flex items-center gap-2 px-4 h-9 border-b border-[var(--border)]">
           <span className="w-2.5 h-2.5 rounded-full opacity-70 bg-[var(--red)]" />
@@ -450,6 +450,9 @@ export function Terminal() {
               <Accent>guest@ken</Accent>
               <Muted>:~$</Muted>
             </span>
+            {/* Phones: the input is 16px so iOS Safari doesn't zoom on focus, then scaled
+                to 75% so it matches the 12px terminal text and the caret lines up. */}
+            <span className="flex-1 min-w-0 flex items-center overflow-hidden">
             <input
               ref={inputRef}
               value={input}
@@ -463,9 +466,9 @@ export function Terminal() {
               autoCapitalize="off"
               aria-label="Command"
               enterKeyHint="send"
-              // 16px on phones stops iOS Safari from zooming in on focus.
-              className="flex-1 min-w-0 bg-transparent outline-none text-[16px] sm:text-[12px] text-[var(--fg)] caret-[var(--accent)]"
+              className="w-[133.334%] shrink-0 origin-left scale-75 sm:w-full sm:scale-100 bg-transparent outline-none leading-[1.7] text-[16px] sm:text-[12px] text-[var(--fg)] caret-[var(--accent)]"
             />
+            </span>
           </label>
         </div>
         </div>
