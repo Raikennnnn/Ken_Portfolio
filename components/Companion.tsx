@@ -16,7 +16,7 @@
  *  - hero clicks cycle: wave → scan (HUD readout) → nod → spin
  *  - 5 clicks in 2s trips the "rate limiter" (glitch + 429)
  *  - docked: comments once per section, click opens the terminal
- *  - at the page bottom (and always on phones) the dock peeks from the edge
+ *  - the dock scales with the viewport and always stays fully on screen
  */
 
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -49,7 +49,6 @@ type Shared = {
   rect: Rect;
   /** 0 = hero slot, 1 = docked */
   t: number;
-  peek: number;
   mouse: { x: number; y: number; active: boolean };
   /** Centre of the hovered/focused link or button, in CSS px. */
   link: { x: number; y: number; active: boolean };
@@ -87,7 +86,7 @@ function envelope(p: number, edgeIn = 0.15, edgeOut = 0.2) {
 function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: DomRefs }) {
   const { size } = useThree();
 
-  useFrame((_, dt) => {
+  useFrame(() => {
     const s = shared.current;
     const vw = size.width;
     const vh = size.height;
@@ -96,16 +95,14 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
     const slotEl = document.getElementById("avatar-slot");
     const slot = slotEl?.getBoundingClientRect();
 
-    // Dock rectangle (bottom-right). Peeks down at the page bottom and on phones.
-    const dw = mobile ? 86 : 124;
-    const dh = dw * 1.4;
-    const margin = mobile ? 12 : 24;
-    const nearBottom =
-      document.documentElement.scrollHeight - (window.scrollY + vh) < 280;
-    s.peek = THREE.MathUtils.damp(s.peek, mobile || nearBottom ? 1 : 0, 6, dt);
+    // Dock rectangle (bottom-right), sized to the viewport so it stays readable on
+    // phones and never takes over short landscape screens.
+    const margin = mobile ? 14 : 24;
+    const dh = clamp(Math.min(vw * 0.3, vh * 0.26), 118, 176);
+    const dw = dh / 1.4;
     const dock: Rect = {
       x: vw - dw - margin,
-      y: vh - dh - margin + s.peek * (dh * 0.45 + margin),
+      y: vh - dh - margin,
       w: dw,
       h: dh,
     };
@@ -161,7 +158,7 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       } else {
         // Dock: above the dock, right-aligned
         bx = dock.x + dock.w - bw;
-        by = Math.min(dock.y, vh - dh * 0.6) - bh - 10;
+        by = dock.y - bh - 10;
       }
       bx = clamp(bx, 12, vw - bw - 12);
       by = clamp(by, 64, vh - bh - 12);
@@ -183,7 +180,7 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
         }
       } else {
         x = dock.x - w - 12;
-        y = Math.min(dock.y, vh - dh * 0.6) + 8;
+        y = dock.y + 8;
       }
       el.style.transform = `translate3d(${clamp(x, 12, vw - w - 12)}px, ${clamp(y, 64, vh - h - 12)}px, 0)`;
     }
@@ -517,7 +514,6 @@ export function Companion() {
   const shared = useRef<Shared>({
     rect: { x: 0, y: 0, w: 0, h: 0 },
     t: 0,
-    peek: 0,
     mouse: { x: 0, y: 0, active: false },
     link: { x: 0, y: 0, active: false },
     scroll: { at: -Infinity, dir: 1 },
@@ -673,9 +669,13 @@ export function Companion() {
     });
 
     // Comment once per section, only once docked, never on phones (the bubble would cover content).
-    const visible = new Set<string>();
+    // Measured at speak time, so a queued line is dropped if you've already scrolled past.
+    const onScreen = (id: string) => {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      return !!r && r.top < window.innerHeight * 0.65 && r.bottom > window.innerHeight * 0.35;
+    };
     const sayFor = (id: string) => {
-      if (!visible.has(id) || saidSections.current.has(id) || s.terminalOpen) return;
+      if (!onScreen(id) || saidSections.current.has(id) || s.terminalOpen) return;
       saidSections.current.add(id);
       say(SECTION_LINES[id], 4600);
     };
@@ -683,8 +683,6 @@ export function Companion() {
       (entries) => {
         for (const entry of entries) {
           const id = entry.target.id;
-          if (entry.isIntersecting) visible.add(id);
-          else visible.delete(id);
           if (!entry.isIntersecting || !SECTION_LINES[id]) continue;
           if (saidSections.current.has(id) || s.t < 0.9 || window.innerWidth < 768) continue;
           // Don't talk over a bubble that's still up; re-check visibility when it's done.
