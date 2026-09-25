@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { profile, projects, skills, links, certifications, writeups, projectsUsing } from "@/content/data";
 import { emitAvatar, onToggleTerminal, type AvatarAction } from "@/lib/avatarBus";
+import { SCAN_LINES, SCAN_STEP_MS } from "@/lib/scanLines";
 
 type Line = { id: number; node: ReactNode };
 
@@ -297,6 +298,15 @@ export function Terminal() {
       case "nod":
         emitAvatar({ type: "action", action: cmd.toLowerCase() as AvatarAction });
         print(<Muted>avatar ← {cmd.toLowerCase()} <span className="text-[var(--green)]">ok</span></Muted>);
+        // The scan readout prints here — the avatar's HUD stays hidden while the terminal is open.
+        if (cmd.toLowerCase() === "scan") {
+          SCAN_LINES.forEach((line, i) =>
+            window.setTimeout(
+              () => print(line.includes("GRANTED") ? <span className="text-[var(--green)]">{line}</span> : <Muted>{line}</Muted>),
+              250 + i * SCAN_STEP_MS
+            )
+          );
+        }
         break;
 
       case "history":
@@ -415,9 +425,20 @@ export function Terminal() {
           </button>
         </div>
 
+        <div className={`flex flex-col sm:flex-row ${fit ? "flex-1 min-h-0" : "h-[min(60vh,460px)]"}`}>
+        {/* Live viewport: the 3D companion flies in here while the terminal is open (Companion.tsx). */}
+        <div
+          className={`terminal-cam relative shrink-0 order-first sm:order-last border-b sm:border-b-0 sm:border-l border-[var(--border)] sm:w-[190px] sm:!h-auto ${fit ? "" : "h-[150px]"}`}
+          style={{ height: fit ? Math.round(Math.min(160, Math.max(120, fit.height * 0.3))) : undefined }}
+        >
+          <div id="terminal-avatar-slot" className="absolute inset-0" aria-hidden />
+          <span className="absolute top-2 left-3 flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+            <span className="sec-dot" /> ken.exe · live
+          </span>
+        </div>
         <div
           ref={scrollRef}
-          className={`${fit ? "flex-1 min-h-0" : "h-[min(56vh,440px)]"} overflow-y-auto overscroll-contain px-4 py-3 font-mono text-[12px] leading-[1.7] text-[var(--fg-soft)]`}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 font-mono text-[12px] leading-[1.7] text-[var(--fg-soft)]"
         >
           {lines.map((l) => (
             <div key={l.id} className="whitespace-pre-wrap break-words">
@@ -446,6 +467,7 @@ export function Terminal() {
               className="flex-1 min-w-0 bg-transparent outline-none text-[16px] sm:text-[12px] text-[var(--fg)] caret-[var(--accent)]"
             />
           </label>
+        </div>
         </div>
       </div>
     </>

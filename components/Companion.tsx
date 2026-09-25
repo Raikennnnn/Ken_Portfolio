@@ -16,6 +16,7 @@
  *  - hero clicks cycle: wave → scan (HUD readout) → nod → spin
  *  - 5 clicks in 2s trips the "rate limiter" (glitch + 429)
  *  - docked: comments once per section, click opens the terminal
+ *  - terminal open: flies into the terminal's live viewport so commands stay visible
  *  - the dock scales with the viewport and always stays fully on screen
  */
 
@@ -25,6 +26,7 @@ import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 import { onAvatar, toggleTerminal, type AvatarAction } from "@/lib/avatarBus";
 import { profile, projects } from "@/content/data";
+import { SCAN_LINES, SCAN_STEP_MS } from "@/lib/scanLines";
 
 const MODEL_URL = "/models/character.glb";
 // The model is uncompressed. Keeping the Draco (CDN) and Meshopt (WASM) decoders off
@@ -49,6 +51,9 @@ type Shared = {
   rect: Rect;
   /** 0 = hero slot, 1 = docked */
   t: number;
+  /** 0 = page layout, 1 = inside the terminal's live viewport */
+  term: number;
+  termRect: Rect | null;
   mouse: { x: number; y: number; active: boolean };
   /** Centre of the hovered/focused link or button, in CSS px. */
   link: { x: number; y: number; active: boolean };
@@ -88,7 +93,7 @@ function envelope(p: number, edgeIn = 0.15, edgeOut = 0.2) {
 function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: DomRefs }) {
   const { size } = useThree();
 
-  useFrame(() => {
+  useFrame((_, dt) => {
     const s = shared.current;
     const vw = size.width;
     const vh = size.height;
@@ -120,11 +125,25 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
     const hero: Rect = slot
       ? { x: slot.left, y: slot.top, w: slot.width, h: slot.height }
       : dock;
-    s.rect = {
+    const page: Rect = {
       x: lerp(hero.x, dock.x, s.t),
       y: lerp(hero.y, dock.y, s.t),
       w: lerp(hero.w, dock.w, s.t),
       h: lerp(hero.h, dock.h, s.t),
+    };
+
+    // Terminal open → fly into its live viewport. The last rect is kept so he flies back out.
+    const cam = s.terminalOpen ? document.getElementById("terminal-avatar-slot")?.getBoundingClientRect() : null;
+    if (cam && cam.height > 0) s.termRect = { x: cam.left, y: cam.top, w: cam.width, h: cam.height };
+    s.term = THREE.MathUtils.damp(s.term, cam && cam.height > 0 ? 1 : 0, 9, dt);
+    if (s.term < 0.001) s.term = 0;
+    const k = s.termRect ? smooth(s.term) : 0;
+    const to = s.termRect ?? page;
+    s.rect = {
+      x: lerp(page.x, to.x, k),
+      y: lerp(page.y, to.y, k),
+      w: lerp(page.w, to.w, k),
+      h: lerp(page.h, to.h, k),
     };
 
     // ── Position the DOM overlays ──
@@ -146,7 +165,7 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       el.style.transform = `translate3d(${dock.x}px, ${dock.y}px, 0)`;
       el.style.width = `${dock.w}px`;
       el.style.height = `${dock.h}px`;
-      el.style.opacity = String(clamp((s.t - 0.6) / 0.4, 0, 1));
+      el.style.opacity = String(clamp((s.t - 0.6) / 0.4, 0, 1) * (1 - s.term));
     }
 
     if (dom.bubble.current) {
@@ -204,10 +223,10 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
 /** Height of the character on screen and where its feet go, in CSS pixels. */
 function bodyMetrics(s: Shared) {
   const r = s.rect;
-  const bottomGap = lerp(30, 6, s.t); // hero leaves room for the "click to interact" label
+  const bottomGap = lerp(lerp(30, 6, s.t), 6, s.term); // hero leaves room for the "click to interact" label
   // Hero on phones reserves room above the head for the speech bubble / scan HUD;
   // the dock leaves room for its "ken.exe" label.
-  const topGap = lerp(s.narrow ? 124 : 10, 20, s.t);
+  const topGap = lerp(lerp(s.narrow ? 124 : 10, 20, s.t), 22, s.term);
   const bodyH = Math.max(40, r.h - bottomGap - topGap);
   return { bodyH, feetY: r.y + r.h - bottomGap, cx: r.x + r.w / 2 };
 }
@@ -510,24 +529,19 @@ const QUIPS = [
   "Stonebound tip: the server owns the currency. Don't bother editing the client.",
 ];
 
-const SCAN_LINES = [
-  "> scanning subject…",
-  `id ......... ${profile.name.toLowerCase()}`,
-  `role ....... ${profile.title.toLowerCase()}`,
-  `projects ... ${String(projects.length).padStart(2, "0")} shipped`,
-  "clearance .. GRANTED",
-];
-
 export function Companion() {
   const [mounted, setMounted] = useState(false);
   const [bubble, setBubble] = useState<{ text: string; id: number } | null>(null);
   const [typed, setTyped] = useState("");
   const [hud, setHud] = useState<string[] | null>(null);
   const [docked, setDocked] = useState(false);
+  const [termOpen, setTermOpen] = useState(false);
 
   const shared = useRef<Shared>({
     rect: { x: 0, y: 0, w: 0, h: 0 },
     t: 0,
+    term: 0,
+    termRect: null,
     mouse: { x: 0, y: 0, active: false },
     link: { x: 0, y: 0, active: false },
     scroll: { at: -Infinity, dir: 1 },
@@ -570,6 +584,7 @@ export function Companion() {
   // On phones the bubble and the scan HUD share the spot above the head,
   // so whichever comes last replaces the other.
   const say = (text: string, ms = 4200) => {
+    if (shared.current.terminalOpen) return; // the terminal prints its own replies
     if (shared.current.narrow) clearHud();
     const id = Date.now();
     bubbleUntil.current = performance.now() + ms;
@@ -599,6 +614,7 @@ export function Companion() {
   };
 
   const runScanHud = () => {
+    if (shared.current.terminalOpen) return; // the terminal prints the scan readout
     clearHud(); // restart cleanly if a scan is already running
     if (shared.current.narrow) {
       bubbleUntil.current = 0;
@@ -606,7 +622,7 @@ export function Companion() {
     }
     setHud([]);
     SCAN_LINES.forEach((_, i) => {
-      hudTimers.current.push(window.setTimeout(() => setHud(SCAN_LINES.slice(0, i + 1)), 250 + i * 320));
+      hudTimers.current.push(window.setTimeout(() => setHud(SCAN_LINES.slice(0, i + 1)), 250 + i * SCAN_STEP_MS));
     });
     hudTimers.current.push(window.setTimeout(() => setHud(null), 4600));
   };
@@ -695,7 +711,15 @@ export function Companion() {
     const offBus = onAvatar((ev) => {
       if (ev.type === "action") play(ev.action);
       else if (ev.type === "say") say(ev.text, ev.ms);
-      else if (ev.type === "terminal") s.terminalOpen = ev.open;
+      else if (ev.type === "terminal") {
+        s.terminalOpen = ev.open;
+        setTermOpen(ev.open);
+        if (ev.open) {
+          bubbleUntil.current = 0;
+          setBubble(null);
+          clearHud();
+        }
+      }
       else if (ev.type === "typing") s.typingAt = performance.now();
     });
 
@@ -774,7 +798,7 @@ export function Companion() {
           camera={{ position: [0, 0, CAMERA_Z], fov: FOV, near: 0.1, far: 50 }}
           dpr={[1, 1.75]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-          style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 46 }}
+          style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: termOpen ? 63 : 46 }}
           aria-hidden
         >
           <Lighting />
