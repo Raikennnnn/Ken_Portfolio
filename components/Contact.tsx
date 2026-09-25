@@ -55,7 +55,8 @@ export function Contact() {
                 {l.href
                   .replace(/^mailto:/, "")
                   .replace(/^https?:\/\//, "")
-                  .replace(/\/$/, "")}
+                  .replace(/\/$/, "")
+                  .split("?")[0]} 
                 <span className="inline-block transition-transform group-hover:translate-x-1">
                   &rarr;
                 </span>
