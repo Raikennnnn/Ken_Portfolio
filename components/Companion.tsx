@@ -12,6 +12,7 @@
  * Behaviour
  *  - head + body track the cursor (or the terminal while it is open)
  *  - LEDs pulse; hover lights the coat piping
+ *  - points at the link / button you hover; the coat sways when you scroll
  *  - hero clicks cycle: wave → scan (HUD readout) → nod → spin
  *  - 5 clicks in 2s trips the "rate limiter" (glitch + 429)
  *  - docked: comments once per section, click opens the terminal
@@ -50,6 +51,9 @@ type Shared = {
   t: number;
   peek: number;
   mouse: { x: number; y: number; active: boolean };
+  /** Centre of the hovered/focused link or button, in CSS px. */
+  link: { x: number; y: number; active: boolean };
+  scroll: { at: number; dir: number };
   hovered: boolean;
   terminalOpen: boolean;
   typingAt: number;
@@ -216,12 +220,32 @@ function Character({ shared }: { shared: React.MutableRefObject<Shared> }) {
   // Named joints we animate on top of the Idle clip.
   const rig = useMemo(() => {
     const get = (n: string) => scene.getObjectByName(n) ?? null;
+
+    // The asset only ships a left glove. Mirror it under the empty right wrist
+    // (once — useGLTF caches the scene) so both hands follow the arm joints.
+    const wristL = get("wrist_L");
+    const wristR = get("wrist_R");
+    if (wristL && wristR && !wristR.getObjectByName("right_hand_restored")) {
+      const hand = new THREE.Group();
+      hand.name = "right_hand_restored";
+      hand.scale.x = -1;
+      wristL.children.forEach((part) => hand.add(part.clone(true)));
+      wristR.add(hand);
+    }
+
     const joints = {
       head: get("head"),
       neck: get("neck"),
+      chest: get("chest"),
       shoulderR: get("shoulder_R"),
       elbowR: get("elbow_R"),
-      wristR: get("wrist_R"),
+      wristR,
+      shoulderL: get("shoulder_L"),
+      elbowL: get("elbow_L"),
+      wristL,
+      coatL: get("coat_flap_L"),
+      coatR: get("coat_flap_R"),
+      coatBack: get("coat_back"),
     };
     // Joints the Idle clip doesn't touch must be reset each frame before we add offsets.
     const base = new Map<THREE.Object3D, THREE.Quaternion>();
@@ -260,6 +284,8 @@ function Character({ shared }: { shared: React.MutableRefObject<Shared> }) {
   }, [actions]);
 
   const look = useRef({ yaw: 0, pitch: 0 });
+  const reach = useRef(0);
+  const sway = useRef(0);
   const tmpQ = useMemo(() => new THREE.Quaternion(), []);
   const tmpE = useMemo(() => new THREE.Euler(0, 0, 0, "YXZ"), []);
   const addRot = (obj: THREE.Object3D | null, x: number, y: number, z: number) => {
@@ -344,6 +370,37 @@ function Character({ shared }: { shared: React.MutableRefObject<Shared> }) {
     addRot(rig.neck, pitch * 0.4 + nod * 0.5, yaw * 0.35, 0);
     addRot(rig.head, pitch * 0.6 + nod, yaw * 0.45, headTilt);
     outer.current.rotation.y = bodyYaw;
+
+    // ── Point at the hovered link with the arm on that side ──
+    const motion = s.reducedMotion ? 0 : 1;
+    const wantReach = s.link.active && !act && !s.terminalOpen && !s.hovered ? motion : 0;
+    reach.current = THREE.MathUtils.damp(reach.current, wantReach, 6, dt);
+    if (reach.current > 0.001) {
+      const shoulderY = feetY - bodyH * 0.78;
+      const dx = s.link.x - cx;
+      const dyUp = shoulderY - s.link.y;
+      const angle = Math.atan2(dx, -dyUp); // 0 = arm hanging down, ±π/2 = straight out
+      const r = reach.current;
+      // Screen-left is the character's right side.
+      if (dx < 0) {
+        addRot(rig.shoulderR, -0.45 * r, 0, clamp(angle, -2.25, -0.3) * r);
+        addRot(rig.elbowR, -0.2 * r, 0, 0);
+      } else {
+        addRot(rig.shoulderL, -0.45 * r, 0, clamp(angle, 0.3, 2.25) * r);
+        addRot(rig.elbowL, -0.2 * r, 0, 0);
+      }
+    }
+
+    // ── Coat + chest sway right after a scroll ──
+    const sinceScroll = (now - s.scroll.at) / 1000;
+    sway.current = THREE.MathUtils.damp(sway.current, clamp(1 - sinceScroll / 0.9, 0, 1) * motion, 8, dt);
+    const lean = sway.current * s.scroll.dir;
+    if (Math.abs(lean) > 0.001) {
+      addRot(rig.chest, lean * 0.12, 0, 0);
+      addRot(rig.coatL, -lean * 0.42, 0, lean * 0.2);
+      addRot(rig.coatR, -lean * 0.42, 0, -lean * 0.2);
+      addRot(rig.coatBack, -lean * 0.32, 0, 0);
+    }
 
     // Glitch: positional jitter + squash
     if (act === "glitch") {
@@ -462,6 +519,8 @@ export function Companion() {
     t: 0,
     peek: 0,
     mouse: { x: 0, y: 0, active: false },
+    link: { x: 0, y: 0, active: false },
+    scroll: { at: -Infinity, dir: 1 },
     hovered: false,
     terminalOpen: false,
     typingAt: 0,
@@ -569,14 +628,41 @@ export function Companion() {
     if (!mounted) return;
     const s = shared.current;
 
+    const trackLink = (target: EventTarget | null) => {
+      const el = target instanceof Element ? target.closest("a[href], button") : null;
+      if (!el || el.classList.contains("companion-hit")) return void (s.link.active = false);
+      const r = el.getBoundingClientRect();
+      s.link.x = r.left + r.width / 2;
+      s.link.y = r.top + r.height / 2;
+      s.link.active = true;
+    };
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return;
       s.mouse.x = e.clientX;
       s.mouse.y = e.clientY;
       s.mouse.active = true;
+      trackLink(e.target);
     };
-    const onLeave = () => (s.mouse.active = false);
+    const onFocusIn = (e: FocusEvent) => trackLink(e.target);
+    const onFocusOut = () => (s.link.active = false);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - lastY) > 1) {
+        s.scroll.dir = Math.sign(y - lastY);
+        s.scroll.at = performance.now();
+        s.link.active = false; // the hovered element moved; re-acquire on next pointermove
+      }
+      lastY = y;
+    };
+    const onLeave = () => {
+      s.mouse.active = false;
+      s.link.active = false;
+    };
     window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
     document.documentElement.addEventListener("mouseleave", onLeave);
 
     const offBus = onAvatar((ev) => {
@@ -625,6 +711,9 @@ export function Companion() {
 
     return () => {
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
       document.documentElement.removeEventListener("mouseleave", onLeave);
       offBus();
       io.disconnect();
