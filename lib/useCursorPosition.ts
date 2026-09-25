@@ -1,27 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect } from "react";
 
+/** Mirrors the cursor into --mx / --my for the CSS glow. No React state, so no re-renders. */
 export function useCursorPosition() {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const rafRef = useRef<number>(0);
-
-  const onMove = useCallback((e: MouseEvent) => {
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      setPosition({ x: e.clientX, y: e.clientY });
-      document.documentElement.style.setProperty("--mx", `${e.clientX}px`);
-      document.documentElement.style.setProperty("--my", `${e.clientY}px`);
-    });
-  }, []);
-
   useEffect(() => {
-    window.addEventListener("mousemove", onMove);
+    let raf = 0;
+    const onMove = (e: MouseEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty("--mx", `${e.clientX}px`);
+        document.documentElement.style.setProperty("--my", `${e.clientY}px`);
+      });
+    };
+    window.addEventListener("mousemove", onMove, { passive: true });
     return () => {
       window.removeEventListener("mousemove", onMove);
-      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(raf);
     };
-  }, [onMove]);
-
-  return position;
+  }, []);
 }
