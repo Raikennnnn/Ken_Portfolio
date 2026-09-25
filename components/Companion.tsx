@@ -560,7 +560,17 @@ export function Companion() {
 
   // ── Speech ──
   const bubbleUntil = useRef(0);
+  const hudTimers = useRef<number[]>([]);
+  const clearHud = () => {
+    hudTimers.current.forEach((t) => window.clearTimeout(t));
+    hudTimers.current = [];
+    setHud(null);
+  };
+
+  // On phones the bubble and the scan HUD share the spot above the head,
+  // so whichever comes last replaces the other.
   const say = (text: string, ms = 4200) => {
+    if (shared.current.narrow) clearHud();
     const id = Date.now();
     bubbleUntil.current = performance.now() + ms;
     setBubble({ text, id });
@@ -589,11 +599,16 @@ export function Companion() {
   };
 
   const runScanHud = () => {
+    clearHud(); // restart cleanly if a scan is already running
+    if (shared.current.narrow) {
+      bubbleUntil.current = 0;
+      setBubble(null);
+    }
     setHud([]);
     SCAN_LINES.forEach((_, i) => {
-      timers.current.push(window.setTimeout(() => setHud(SCAN_LINES.slice(0, i + 1)), 250 + i * 320));
+      hudTimers.current.push(window.setTimeout(() => setHud(SCAN_LINES.slice(0, i + 1)), 250 + i * 320));
     });
-    timers.current.push(window.setTimeout(() => setHud(null), 4600));
+    hudTimers.current.push(window.setTimeout(() => setHud(null), 4600));
   };
 
   const onClick = () => {
@@ -733,6 +748,7 @@ export function Companion() {
       io.disconnect();
       window.clearInterval(poll);
       timers.current.forEach((t) => window.clearTimeout(t));
+      hudTimers.current.forEach((t) => window.clearTimeout(t));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
