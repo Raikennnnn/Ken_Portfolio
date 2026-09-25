@@ -731,7 +731,7 @@ export function Companion() {
     let nudged = false;
     const poll = window.setInterval(() => {
       setDocked(s.t > 0.5);
-      if (!nudged && step.current === 0 && s.t < 0.1 && performance.now() - lastInteraction.current > 14000) {
+      if (!nudged && step.current === 0 && s.t < 0.1 && !s.terminalOpen && performance.now() - lastInteraction.current > 14000) {
         nudged = true;
         play("wave");
         say("Psst — I'm interactive. Click me.", 3600);
@@ -804,7 +804,7 @@ export function Companion() {
         ref={dom.bubble}
         role="status"
         aria-live="polite"
-        className={`companion-bubble fixed left-0 top-0 z-[48] ${bubble ? "is-visible" : ""}`}
+        className={`companion-bubble fixed left-0 top-0 z-[61] ${bubble ? "is-visible" : ""}`}
       >
         <span className="text-[var(--accent)]">ken&gt;</span> {typed}
         {bubble && typed.length < bubble.text.length && <span className="cursor-blink !h-3 !w-1.5" />}
