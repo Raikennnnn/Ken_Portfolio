@@ -47,12 +47,12 @@ export function Contact() {
               href={l.href}
               target={l.href.startsWith("mailto:") ? undefined : "_blank"}
               rel="noreferrer"
-              className="flex items-center justify-between px-4 py-3.5 border border-[var(--border)] rounded-lg bg-[var(--bg-soft)] no-underline text-inherit transition-all duration-300 hover:border-[var(--border-active)] hover:shadow-[0_2px_16px_var(--accent-glow)] group"
+              className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3.5 border border-[var(--border)] rounded-lg bg-[var(--bg-soft)] no-underline text-inherit transition-all duration-300 hover:border-[var(--border-active)] hover:shadow-[0_2px_16px_var(--accent-glow)] group"
             >
               <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-muted)] group-hover:text-[var(--accent)] transition-colors">
                 {l.label}
               </span>
-              <span className="font-mono text-xs text-[var(--fg-soft)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-2">
+              <span className="font-mono text-xs text-[var(--fg-soft)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-2 min-w-0 max-w-full break-all sm:text-right">
                 {l.href
                   .replace(/^mailto:/, "")
                   .replace(/^https?:\/\//, "")
@@ -68,7 +68,8 @@ export function Contact() {
       </div>
 
       {/* Footer */}
-      <div className="mt-20 pt-6 border-t border-[var(--border)]">
+      {/* Bottom padding keeps the footer clear of the docked companion when the side margin is too narrow for it. */}
+      <div className="mt-20 pt-6 pb-[190px] min-[1440px]:pb-8 border-t border-[var(--border)]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 font-mono text-[10px] text-[var(--fg-muted)]">
           <span>{meta.copy}</span>
           <span className="flex items-center gap-4">

@@ -411,7 +411,8 @@ body::before {
   color: var(--green);
 }
 
-/* ── Keyboard hint ── */
+/* ── Keyboard hint ── (in the components layer so utilities like `hidden` still win) */
+@layer components {
 .kbd {
   display: inline-flex;
   align-items: center;
@@ -423,6 +424,7 @@ body::before {
   border-radius: 4px;
   color: var(--fg-muted);
   background: var(--bg-terminal);
+}
 }
 
 /* ── 3D companion overlays ── */
@@ -514,6 +516,11 @@ body::before {
   to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
+.terminal-cam {
+  background:
+    radial-gradient(90% 70% at 50% 100%, var(--accent-glow), transparent 70%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(34, 211, 238, 0.025) 3px 4px);
+}
 .terminal-window input:focus-visible {
   outline: none;
 }

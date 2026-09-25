@@ -16,7 +16,8 @@
  *  - hero clicks cycle: wave → scan (HUD readout) → nod → spin
  *  - 5 clicks in 2s trips the "rate limiter" (glitch + 429)
  *  - docked: comments once per section, click opens the terminal
- *  - at the page bottom (and always on phones) the dock peeks from the edge
+ *  - terminal open: flies into the terminal's live viewport so commands stay visible
+ *  - the dock scales with the viewport and always stays fully on screen
  */
 
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -25,6 +26,7 @@ import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 import { onAvatar, toggleTerminal, type AvatarAction } from "@/lib/avatarBus";
 import { profile, projects } from "@/content/data";
+import { SCAN_LINES, SCAN_STEP_MS } from "@/lib/scanLines";
 
 const MODEL_URL = "/models/character.glb";
 // The model is uncompressed. Keeping the Draco (CDN) and Meshopt (WASM) decoders off
@@ -49,7 +51,9 @@ type Shared = {
   rect: Rect;
   /** 0 = hero slot, 1 = docked */
   t: number;
-  peek: number;
+  /** 0 = page layout, 1 = inside the terminal's live viewport */
+  term: number;
+  termRect: Rect | null;
   mouse: { x: number; y: number; active: boolean };
   /** Centre of the hovered/focused link or button, in CSS px. */
   link: { x: number; y: number; active: boolean };
@@ -59,6 +63,8 @@ type Shared = {
   typingAt: number;
   action: { name: AvatarAction; start: number } | null;
   reducedMotion: boolean;
+  /** Phone-width layout: speech + HUD go above the head instead of beside it. */
+  narrow: boolean;
 };
 
 type DomRefs = {
@@ -92,20 +98,19 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
     const vw = size.width;
     const vh = size.height;
     const mobile = vw < 768;
+    s.narrow = mobile;
 
     const slotEl = document.getElementById("avatar-slot");
     const slot = slotEl?.getBoundingClientRect();
 
-    // Dock rectangle (bottom-right). Peeks down at the page bottom and on phones.
-    const dw = mobile ? 86 : 124;
-    const dh = dw * 1.4;
-    const margin = mobile ? 12 : 24;
-    const nearBottom =
-      document.documentElement.scrollHeight - (window.scrollY + vh) < 280;
-    s.peek = THREE.MathUtils.damp(s.peek, mobile || nearBottom ? 1 : 0, 6, dt);
+    // Dock rectangle (bottom-right), sized to the viewport so it stays readable on
+    // phones and never takes over short landscape screens.
+    const margin = mobile ? 14 : 24;
+    const dh = clamp(Math.min(vw * 0.3, vh * 0.26), 118, 176);
+    const dw = dh / 1.4;
     const dock: Rect = {
       x: vw - dw - margin,
-      y: vh - dh - margin + s.peek * (dh * 0.45 + margin),
+      y: vh - dh - margin,
       w: dw,
       h: dh,
     };
@@ -120,11 +125,25 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
     const hero: Rect = slot
       ? { x: slot.left, y: slot.top, w: slot.width, h: slot.height }
       : dock;
-    s.rect = {
+    const page: Rect = {
       x: lerp(hero.x, dock.x, s.t),
       y: lerp(hero.y, dock.y, s.t),
       w: lerp(hero.w, dock.w, s.t),
       h: lerp(hero.h, dock.h, s.t),
+    };
+
+    // Terminal open → fly into its live viewport. The last rect is kept so he flies back out.
+    const cam = s.terminalOpen ? document.getElementById("terminal-avatar-slot")?.getBoundingClientRect() : null;
+    if (cam && cam.height > 0) s.termRect = { x: cam.left, y: cam.top, w: cam.width, h: cam.height };
+    s.term = THREE.MathUtils.damp(s.term, cam && cam.height > 0 ? 1 : 0, 9, dt);
+    if (s.term < 0.001) s.term = 0;
+    const k = s.termRect ? smooth(s.term) : 0;
+    const to = s.termRect ?? page;
+    s.rect = {
+      x: lerp(page.x, to.x, k),
+      y: lerp(page.y, to.y, k),
+      w: lerp(page.w, to.w, k),
+      h: lerp(page.h, to.h, k),
     };
 
     // ── Position the DOM overlays ──
@@ -146,7 +165,7 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       el.style.transform = `translate3d(${dock.x}px, ${dock.y}px, 0)`;
       el.style.width = `${dock.w}px`;
       el.style.height = `${dock.h}px`;
-      el.style.opacity = String(clamp((s.t - 0.6) / 0.4, 0, 1));
+      el.style.opacity = String(clamp((s.t - 0.6) / 0.4, 0, 1) * (1 - s.term));
     }
 
     if (dom.bubble.current) {
@@ -155,13 +174,18 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       const bh = el.offsetHeight;
       let bx: number, by: number;
       if (s.t < 0.5) {
-        // Hero: up and to the left of the head
+        // Hero: up and to the left of the head, or above it when there's no room
+        // beside it (phones) — the bubble must never cover the character.
         bx = hitX - bw + hitW * 0.3;
         by = hitY - 4;
+        if (s.narrow || bx < 12) {
+          bx = cx - bw / 2;
+          by = hitY - bh - 10;
+        }
       } else {
         // Dock: above the dock, right-aligned
         bx = dock.x + dock.w - bw;
-        by = Math.min(dock.y, vh - dh * 0.6) - bh - 10;
+        by = dock.y - bh - 10;
       }
       bx = clamp(bx, 12, vw - bw - 12);
       by = clamp(by, 64, vh - bh - 12);
@@ -176,14 +200,18 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       if (s.t < 0.5) {
         x = hitX + hitW - 8;
         y = hitY + bodyH * 0.22;
-        if (x + w > vw - 12) {
+        if (s.narrow) {
+          // Phones: the reserved space above the head.
+          x = cx - w / 2;
+          y = hitY - h - 10;
+        } else if (x + w > vw - 12) {
           // No room on the right: float it over the legs instead of covering the headline.
           x = cx - w / 2;
           y = feetY - bodyH * 0.42;
         }
       } else {
         x = dock.x - w - 12;
-        y = Math.min(dock.y, vh - dh * 0.6) + 8;
+        y = dock.y + 8;
       }
       el.style.transform = `translate3d(${clamp(x, 12, vw - w - 12)}px, ${clamp(y, 64, vh - h - 12)}px, 0)`;
     }
@@ -195,8 +223,10 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
 /** Height of the character on screen and where its feet go, in CSS pixels. */
 function bodyMetrics(s: Shared) {
   const r = s.rect;
-  const bottomGap = lerp(30, 6, s.t); // hero leaves room for the "click to interact" label
-  const topGap = lerp(10, 20, s.t); // dock leaves room for the "ken.exe" label
+  const bottomGap = lerp(lerp(30, 6, s.t), 6, s.term); // hero leaves room for the "click to interact" label
+  // Hero on phones reserves room above the head for the speech bubble / scan HUD;
+  // the dock leaves room for its "ken.exe" label.
+  const topGap = lerp(lerp(s.narrow ? 124 : 10, 20, s.t), 22, s.term);
   const bodyH = Math.max(40, r.h - bottomGap - topGap);
   return { bodyH, feetY: r.y + r.h - bottomGap, cx: r.x + r.w / 2 };
 }
@@ -305,9 +335,16 @@ function Character({ shared }: { shared: React.MutableRefObject<Shared> }) {
 
     // ── Place the character over its DOM rect ──
     const { bodyH, feetY, cx } = bodyMetrics(s);
-    const wpp = VISIBLE_H / vh;
+    // Map from the canvas's own on-screen box, not the window: with the iOS keyboard up,
+    // fixed elements get shifted and the canvas may no longer sit at (0, 0).
+    const cr = state.gl.domElement.getBoundingClientRect();
+    const wpp = VISIBLE_H / (cr.height || vh);
     const bob = s.reducedMotion ? 0 : Math.sin(time * 1.3) * 0.006;
-    outer.current.position.set((cx - vw / 2) * wpp, -(feetY - vh / 2) * wpp, 0);
+    outer.current.position.set(
+      (cx - cr.left - cr.width / 2) * wpp,
+      -(feetY - cr.top - cr.height / 2) * wpp,
+      0
+    );
     outer.current.scale.setScalar(bodyH * wpp);
     if (inner.current) inner.current.position.y = normalise.offset.y * normalise.scale + bob;
 
@@ -499,25 +536,19 @@ const QUIPS = [
   "Stonebound tip: the server owns the currency. Don't bother editing the client.",
 ];
 
-const SCAN_LINES = [
-  "> scanning subject…",
-  `id ......... ${profile.name.toLowerCase()}`,
-  `role ....... ${profile.title.toLowerCase()}`,
-  `projects ... ${String(projects.length).padStart(2, "0")} shipped`,
-  "clearance .. GRANTED",
-];
-
 export function Companion() {
   const [mounted, setMounted] = useState(false);
   const [bubble, setBubble] = useState<{ text: string; id: number } | null>(null);
   const [typed, setTyped] = useState("");
   const [hud, setHud] = useState<string[] | null>(null);
   const [docked, setDocked] = useState(false);
+  const [termOpen, setTermOpen] = useState(false);
 
   const shared = useRef<Shared>({
     rect: { x: 0, y: 0, w: 0, h: 0 },
     t: 0,
-    peek: 0,
+    term: 0,
+    termRect: null,
     mouse: { x: 0, y: 0, active: false },
     link: { x: 0, y: 0, active: false },
     scroll: { at: -Infinity, dir: 1 },
@@ -526,6 +557,7 @@ export function Companion() {
     typingAt: 0,
     action: null,
     reducedMotion: false,
+    narrow: false,
   });
   const dom: DomRefs = {
     hit: useRef<HTMLButtonElement>(null),
@@ -549,7 +581,18 @@ export function Companion() {
 
   // ── Speech ──
   const bubbleUntil = useRef(0);
+  const hudTimers = useRef<number[]>([]);
+  const clearHud = () => {
+    hudTimers.current.forEach((t) => window.clearTimeout(t));
+    hudTimers.current = [];
+    setHud(null);
+  };
+
+  // On phones the bubble and the scan HUD share the spot above the head,
+  // so whichever comes last replaces the other.
   const say = (text: string, ms = 4200) => {
+    if (shared.current.terminalOpen) return; // the terminal prints its own replies
+    if (shared.current.narrow) clearHud();
     const id = Date.now();
     bubbleUntil.current = performance.now() + ms;
     setBubble({ text, id });
@@ -578,11 +621,17 @@ export function Companion() {
   };
 
   const runScanHud = () => {
+    if (shared.current.terminalOpen) return; // the terminal prints the scan readout
+    clearHud(); // restart cleanly if a scan is already running
+    if (shared.current.narrow) {
+      bubbleUntil.current = 0;
+      setBubble(null);
+    }
     setHud([]);
     SCAN_LINES.forEach((_, i) => {
-      timers.current.push(window.setTimeout(() => setHud(SCAN_LINES.slice(0, i + 1)), 250 + i * 320));
+      hudTimers.current.push(window.setTimeout(() => setHud(SCAN_LINES.slice(0, i + 1)), 250 + i * SCAN_STEP_MS));
     });
-    timers.current.push(window.setTimeout(() => setHud(null), 4600));
+    hudTimers.current.push(window.setTimeout(() => setHud(null), 4600));
   };
 
   const onClick = () => {
@@ -612,7 +661,8 @@ export function Companion() {
       const cycle = (i - 1) % 3;
       if (cycle === 0) {
         play("scan");
-        say("Hold still. Running a quick identity check…", 2600);
+        // On phones the HUD uses the bubble's spot above the head, so skip the line.
+        if (!shared.current.narrow) say("Hold still. Running a quick identity check…", 2600);
       } else if (cycle === 1) {
         play("nod");
         say(QUIPS[Math.floor((i - 1) / 3) % QUIPS.length]);
@@ -668,14 +718,26 @@ export function Companion() {
     const offBus = onAvatar((ev) => {
       if (ev.type === "action") play(ev.action);
       else if (ev.type === "say") say(ev.text, ev.ms);
-      else if (ev.type === "terminal") s.terminalOpen = ev.open;
+      else if (ev.type === "terminal") {
+        s.terminalOpen = ev.open;
+        setTermOpen(ev.open);
+        if (ev.open) {
+          bubbleUntil.current = 0;
+          setBubble(null);
+          clearHud();
+        }
+      }
       else if (ev.type === "typing") s.typingAt = performance.now();
     });
 
     // Comment once per section, only once docked, never on phones (the bubble would cover content).
-    const visible = new Set<string>();
+    // Measured at speak time, so a queued line is dropped if you've already scrolled past.
+    const onScreen = (id: string) => {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      return !!r && r.top < window.innerHeight * 0.65 && r.bottom > window.innerHeight * 0.35;
+    };
     const sayFor = (id: string) => {
-      if (!visible.has(id) || saidSections.current.has(id) || s.terminalOpen) return;
+      if (!onScreen(id) || saidSections.current.has(id) || s.terminalOpen) return;
       saidSections.current.add(id);
       say(SECTION_LINES[id], 4600);
     };
@@ -683,8 +745,6 @@ export function Companion() {
       (entries) => {
         for (const entry of entries) {
           const id = entry.target.id;
-          if (entry.isIntersecting) visible.add(id);
-          else visible.delete(id);
           if (!entry.isIntersecting || !SECTION_LINES[id]) continue;
           if (saidSections.current.has(id) || s.t < 0.9 || window.innerWidth < 768) continue;
           // Don't talk over a bubble that's still up; re-check visibility when it's done.
@@ -702,7 +762,7 @@ export function Companion() {
     let nudged = false;
     const poll = window.setInterval(() => {
       setDocked(s.t > 0.5);
-      if (!nudged && step.current === 0 && s.t < 0.1 && performance.now() - lastInteraction.current > 14000) {
+      if (!nudged && step.current === 0 && s.t < 0.1 && !s.terminalOpen && performance.now() - lastInteraction.current > 14000) {
         nudged = true;
         play("wave");
         say("Psst — I'm interactive. Click me.", 3600);
@@ -719,6 +779,7 @@ export function Companion() {
       io.disconnect();
       window.clearInterval(poll);
       timers.current.forEach((t) => window.clearTimeout(t));
+      hudTimers.current.forEach((t) => window.clearTimeout(t));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
@@ -744,7 +805,7 @@ export function Companion() {
           camera={{ position: [0, 0, CAMERA_Z], fov: FOV, near: 0.1, far: 50 }}
           dpr={[1, 1.75]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-          style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 46 }}
+          style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: termOpen ? 63 : 46 }}
           aria-hidden
         >
           <Lighting />
@@ -774,7 +835,7 @@ export function Companion() {
         ref={dom.bubble}
         role="status"
         aria-live="polite"
-        className={`companion-bubble fixed left-0 top-0 z-[48] ${bubble ? "is-visible" : ""}`}
+        className={`companion-bubble fixed left-0 top-0 z-[61] ${bubble ? "is-visible" : ""}`}
       >
         <span className="text-[var(--accent)]">ken&gt;</span> {typed}
         {bubble && typed.length < bubble.text.length && <span className="cursor-blink !h-3 !w-1.5" />}
