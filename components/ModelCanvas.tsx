@@ -324,16 +324,18 @@ function CharacterModel({
     const center = box.getCenter(new THREE.Vector3());
 
     const isMobile = canvasSize.width < 768;
-    const targetHeight = isMobile ? 2.2 : 4.5;
+    const compactDesktop = canvasSize.width < 1100;
+    const targetHeight = isMobile ? 3.4 : compactDesktop ? 5.4 : 7.2;
     const scale = targetHeight / size.y;
     baseScale.current = scale;
     groupRef.current.scale.setScalar(scale);
 
-    baseX.current = viewport.width * (isMobile ? 0.29 : 0.31) - center.x * scale;
+    baseX.current = viewport.width * (isMobile ? 0.29 : compactDesktop ? 0.33 : 0.31) - center.x * scale;
     groupRef.current.position.x = baseX.current;
     baseZ.current = -center.z * scale;
     groupRef.current.position.z = baseZ.current;
-    baseY.current = -center.y * scale + (-size.y / 2) * scale + (isMobile ? 0.2 : 1.85);
+    baseY.current = -center.y * scale + (-size.y / 2) * scale
+      + (isMobile ? 0.2 : compactDesktop ? 1.0 : 1.85);
     groupRef.current.position.y = baseY.current;
   }, [canvasSize.width, clonedScene, viewport.width]);
 
