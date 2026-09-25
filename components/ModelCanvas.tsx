@@ -34,6 +34,7 @@ function usePageInteraction(onLinkClick: () => void) {
 
   useEffect(() => {
     const state = interaction.current;
+    let pendingNavigation: number | undefined;
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     state.reducedMotion = motionQuery.matches;
     state.scrollY = window.scrollY;
@@ -61,6 +62,19 @@ function usePageInteraction(onLinkClick: () => void) {
       state.pointerSeen = false;
       state.hoveringLink = false;
     };
+    const onFocusIn = (event: FocusEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!link) return;
+      const rect = link.getBoundingClientRect();
+      state.hoverTarget.set(
+        ((rect.left + rect.width / 2) / window.innerWidth) * 2 - 1,
+        1 - ((rect.top + rect.height / 2) / window.innerHeight) * 2
+      );
+      state.hoveringLink = true;
+    };
+    const onFocusOut = () => {
+      state.hoveringLink = false;
+    };
     const onScroll = () => {
       const nextY = window.scrollY;
       const movement = nextY - state.scrollY;
@@ -84,19 +98,38 @@ function usePageInteraction(onLinkClick: () => void) {
       );
       state.clickAt = performance.now() / 1000;
       if (!state.reducedMotion) onLinkClick();
+
+      // Let the character finish its reach before same-page navigation hides it.
+      const href = link.getAttribute("href");
+      if (state.reducedMotion || event.button !== 0 || event.metaKey || event.ctrlKey
+        || event.shiftKey || event.altKey || !href?.startsWith("#") || href.length < 2) return;
+      const destination = document.getElementById(decodeURIComponent(href.slice(1)));
+      if (!destination) return;
+      event.preventDefault();
+      if (pendingNavigation !== undefined) window.clearTimeout(pendingNavigation);
+      pendingNavigation = window.setTimeout(() => {
+        if (window.location.hash !== href) window.history.pushState(null, "", href);
+        destination.scrollIntoView({ behavior: "smooth", block: "start" });
+        pendingNavigation = undefined;
+      }, 680);
     };
 
     motionQuery.addEventListener("change", onMotionChange);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     document.addEventListener("pointerleave", onPointerLeave);
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
     window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("click", onClick, true);
     return () => {
       motionQuery.removeEventListener("change", onMotionChange);
       window.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerleave", onPointerLeave);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("click", onClick, true);
+      if (pendingNavigation !== undefined) window.clearTimeout(pendingNavigation);
     };
   }, [onLinkClick]);
 
@@ -305,6 +338,10 @@ function CharacterModel({
     coatR: clonedScene.getObjectByName("coat_flap_R"),
     coatBack: clonedScene.getObjectByName("coat_back"),
   }), [clonedScene]);
+  const unkeyedRestPose = useMemo(() => ({
+    elbowR: joints.elbowR?.quaternion.clone(),
+    wristR: joints.wristR?.quaternion.clone(),
+  }), [joints]);
 
   useEffect(() => {
     const idleClip = animations.find((clip) => clip.name === "Idle");
@@ -346,6 +383,10 @@ function CharacterModel({
     const page = interaction.current;
     const motion = page.reducedMotion ? 0 : 1;
     mixer.update(delta * motion);
+    // Idle has no right elbow/wrist tracks. Restore them before additive poses
+    // so their rotations cannot accumulate and spin indefinitely.
+    if (joints.elbowR && unkeyedRestPose.elbowR) joints.elbowR.quaternion.copy(unkeyedRestPose.elbowR);
+    if (joints.wristR && unkeyedRestPose.wristR) joints.wristR.quaternion.copy(unkeyedRestPose.wristR);
 
     smoothedPointer.current.lerp(
       page.pointer,
@@ -358,7 +399,7 @@ function CharacterModel({
       delta
     );
     const scrollRecent = THREE.MathUtils.clamp(
-      1 - (now - page.scrollAt) / 0.55,
+      1 - (now - page.scrollAt) / 0.9,
       0,
       1
     );
@@ -387,44 +428,53 @@ function CharacterModel({
       lunge
     ) * motion;
     const scrollLean = scrollAmount.current * page.scrollDirection;
-    const scrollPhase = THREE.MathUtils.clamp((now - page.scrollAt) / 0.8, 0, 1);
+    const scrollPhase = THREE.MathUtils.clamp((now - page.scrollAt) / 1.05, 0, 1);
     const scrollHop = Math.sin(scrollPhase * Math.PI) * motion;
-    const wavePhase = (t + 1.5) % 8;
+    const wavePhase = t % 8;
     const wave = THREE.MathUtils.smoothstep(wavePhase, 0, 0.45)
       * (1 - THREE.MathUtils.smoothstep(wavePhase, 1.65, 2.25))
       * (1 - pointAmount.current) * (1 - lunge) * motion;
     const waveSwing = Math.sin(t * 9) * wave;
+    const scanPhase = (t + 8) % 11;
+    const scan = THREE.MathUtils.smoothstep(scanPhase, 0, 0.7)
+      * (1 - THREE.MathUtils.smoothstep(scanPhase, 2.8, 3.5))
+      * (1 - wave) * (1 - pointAmount.current) * (1 - lunge)
+      * (1 - scrollAmount.current) * motion;
+    const scanTurn = Math.sin((scanPhase - 0.5) * 1.7) * scan;
     const entrance = (1 - THREE.MathUtils.smoothstep(t, 0, 1.1)) * motion;
 
     const clickWorldX = page.clickTarget.x * viewport.width / 2;
     const clickMove = THREE.MathUtils.clamp(
       (clickWorldX - baseX.current) * 0.32,
-      -1.1,
-      1.1
+      -0.9,
+      0.9
     ) * lunge;
     groupRef.current.position.x = THREE.MathUtils.damp(
       groupRef.current.position.x,
-      baseX.current + gazeX * 0.16 + clickMove,
+      baseX.current + gazeX * 0.25 + scanTurn * 0.1 + clickMove,
       5,
       delta
     );
-    groupRef.current.position.y = baseY.current + Math.sin(t * 1.3) * 0.035 * motion
-      + scrollHop * 0.24 - entrance * 0.55 + lunge * 0.1;
-    groupRef.current.position.z = baseZ.current + lunge * 1.25 + scrollHop * 0.16;
-    groupRef.current.scale.setScalar(baseScale.current * (1 + lunge * 0.15));
+    groupRef.current.position.y = baseY.current + Math.sin(t * 1.3) * 0.065 * motion
+      + scrollHop * 0.34 - entrance * 0.55 + lunge * 0.16 + pointAmount.current * 0.05;
+    groupRef.current.position.z = baseZ.current + lunge * 0.65
+      + scrollHop * 0.22 + pointAmount.current * 0.22 + scan * 0.12;
+    groupRef.current.scale.setScalar(baseScale.current * (1 + lunge * 0.07));
     groupRef.current.rotation.y = THREE.MathUtils.damp(
       groupRef.current.rotation.y,
-      gazeX * 0.22 + scrollLean * 0.24 + lunge * (aimX < 0 ? -0.16 : 0.16),
+      gazeX * 0.36 + scanTurn * 0.32 + scrollLean * 0.32
+        + pointAmount.current * aimX * 0.16 + lunge * (aimX < 0 ? -0.2 : 0.2),
       5,
       delta
     );
     groupRef.current.rotation.x = THREE.MathUtils.damp(
       groupRef.current.rotation.x,
-      -gazeY * 0.06 - lunge * 0.12 + scrollLean * 0.1,
+      -gazeY * 0.09 - lunge * 0.16 + scrollLean * 0.16,
       5,
       delta
     );
-    groupRef.current.rotation.z = scrollLean * 0.045 + waveSwing * 0.025;
+    groupRef.current.rotation.z = scrollLean * 0.075 + waveSwing * 0.035
+      + Math.sin(t * 0.8) * 0.018 * motion;
 
     // The mixer restores the idle pose first; these rotations add gestures on top.
     const addPose = (joint: THREE.Object3D | undefined, x: number, y: number, z: number) => {
@@ -432,14 +482,15 @@ function CharacterModel({
       poseQuaternion.setFromEuler(poseEuler.set(x, y, z));
       joint.quaternion.multiply(poseQuaternion);
     };
-    addPose(joints.head, -gazeY * 0.19 - scrollLean * 0.12 + tap * 0.12,
-      gazeX * 0.3 + lunge * (aimX < 0 ? -0.1 : 0.1),
-      gazeX * 0.06 + waveSwing * 0.055);
-    addPose(joints.chest, scrollLean * 0.18 - lunge * 0.12,
-      gazeX * 0.1, scrollLean * 0.075 + waveSwing * 0.03);
-    addPose(joints.coatL, -scrollLean * 0.32 - scrollHop * 0.18, 0, scrollLean * 0.15);
-    addPose(joints.coatR, -scrollLean * 0.32 - scrollHop * 0.18, 0, -scrollLean * 0.15);
-    addPose(joints.coatBack, -scrollLean * 0.26 - scrollHop * 0.12, 0, 0);
+    addPose(joints.head, -gazeY * 0.31 - scrollLean * 0.18 + tap * 0.24,
+      gazeX * 0.48 + scanTurn * 0.4 + lunge * (aimX < 0 ? -0.18 : 0.18),
+      gazeX * 0.09 + waveSwing * 0.09 + scanTurn * 0.05);
+    addPose(joints.chest, scrollLean * 0.26 - lunge * 0.2 - pointAmount.current * 0.1,
+      gazeX * 0.19 + scanTurn * 0.22,
+      scrollLean * 0.11 + waveSwing * 0.055);
+    addPose(joints.coatL, -scrollLean * 0.42 - scrollHop * 0.23, 0, scrollLean * 0.2);
+    addPose(joints.coatR, -scrollLean * 0.42 - scrollHop * 0.23, 0, -scrollLean * 0.2);
+    addPose(joints.coatBack, -scrollLean * 0.32 - scrollHop * 0.17, 0, 0);
 
     const shoulderX = (0.5 + groupRef.current.position.x / viewport.width) * window.innerWidth;
     const targetX = (aimX + 1) * window.innerWidth / 2;
@@ -459,20 +510,21 @@ function CharacterModel({
       0, waveSwing * 0.13);
     addPose(joints.wristR, -0.15 * reach * rightWeight - wave * 0.1, 0, waveSwing * 0.2);
     addPose(joints.shoulderL,
-      (-0.55 * reach - 0.32 * tap) * leftWeight - scrollHop * 0.12,
+      (-0.55 * reach - 0.32 * tap) * leftWeight - scrollHop * 0.18 - wave * 0.12,
       0,
-      THREE.MathUtils.clamp(angle, 0.3, 2.25) * reach * leftWeight + scrollHop * 0.4
+      THREE.MathUtils.clamp(angle, 0.3, 2.25) * reach * leftWeight + scrollHop * 0.5 + wave * 0.32
     );
-    addPose(joints.elbowL, -0.25 * reach * leftWeight - 0.4 * tap * leftWeight, 0, 0);
+    addPose(joints.elbowL, -0.25 * reach * leftWeight - 0.4 * tap * leftWeight - wave * 0.1, 0, 0);
     addPose(joints.wristL, -0.15 * reach * leftWeight, 0, 0);
 
-    const baseFade = THREE.MathUtils.clamp(1 - page.scrollY / window.innerHeight * 1.5, 0, 1);
+    const baseFade = THREE.MathUtils.clamp(1 - page.scrollY / window.innerHeight * 0.95, 0, 1);
     const fade = Math.max(baseFade, scrollAmount.current * 0.26, lunge * 0.85);
     scrollFade.current = fade;
     groupRef.current.visible = fade > 0.01;
 
     // ── Hover glow + click pulse glow ──
-    const targetGlow = hovered.current ? 0.15 : 0;
+    const targetGlow = (hovered.current ? 0.15 : 0)
+      + pointAmount.current * 0.1 + scan * 0.08;
     glowIntensity.current = THREE.MathUtils.damp(
       glowIntensity.current,
       targetGlow,
