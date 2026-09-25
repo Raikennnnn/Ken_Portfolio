@@ -141,7 +141,7 @@ export function Hero({
           </a>
           <button onClick={() => toggleTerminal(true)} className="btn-cmd py-2.5 px-5">
             <span className="prompt">&gt;_</span> open terminal
-            <kbd className="kbd ml-1">Ctrl K</kbd>
+            <kbd className="kbd ml-1 hidden sm:inline-flex">Ctrl K</kbd>
           </button>
           {profile.available && (
             <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--green)] ml-1">

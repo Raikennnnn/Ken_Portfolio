@@ -411,7 +411,8 @@ body::before {
   color: var(--green);
 }
 
-/* ── Keyboard hint ── */
+/* ── Keyboard hint ── (in the components layer so utilities like `hidden` still win) */
+@layer components {
 .kbd {
   display: inline-flex;
   align-items: center;
@@ -423,6 +424,7 @@ body::before {
   border-radius: 4px;
   color: var(--fg-muted);
   background: var(--bg-terminal);
+}
 }
 
 /* ── 3D companion overlays ── */
