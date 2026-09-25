@@ -58,6 +58,8 @@ type Shared = {
   typingAt: number;
   action: { name: AvatarAction; start: number } | null;
   reducedMotion: boolean;
+  /** Phone-width layout: speech + HUD go above the head instead of beside it. */
+  narrow: boolean;
 };
 
 type DomRefs = {
@@ -91,6 +93,7 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
     const vw = size.width;
     const vh = size.height;
     const mobile = vw < 768;
+    s.narrow = mobile;
 
     const slotEl = document.getElementById("avatar-slot");
     const slot = slotEl?.getBoundingClientRect();
@@ -152,9 +155,14 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       const bh = el.offsetHeight;
       let bx: number, by: number;
       if (s.t < 0.5) {
-        // Hero: up and to the left of the head
+        // Hero: up and to the left of the head, or above it when there's no room
+        // beside it (phones) — the bubble must never cover the character.
         bx = hitX - bw + hitW * 0.3;
         by = hitY - 4;
+        if (s.narrow || bx < 12) {
+          bx = cx - bw / 2;
+          by = hitY - bh - 10;
+        }
       } else {
         // Dock: above the dock, right-aligned
         bx = dock.x + dock.w - bw;
@@ -173,7 +181,11 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
       if (s.t < 0.5) {
         x = hitX + hitW - 8;
         y = hitY + bodyH * 0.22;
-        if (x + w > vw - 12) {
+        if (s.narrow) {
+          // Phones: the reserved space above the head.
+          x = cx - w / 2;
+          y = hitY - h - 10;
+        } else if (x + w > vw - 12) {
           // No room on the right: float it over the legs instead of covering the headline.
           x = cx - w / 2;
           y = feetY - bodyH * 0.42;
@@ -193,7 +205,9 @@ function Layout({ shared, dom }: { shared: React.MutableRefObject<Shared>; dom: 
 function bodyMetrics(s: Shared) {
   const r = s.rect;
   const bottomGap = lerp(30, 6, s.t); // hero leaves room for the "click to interact" label
-  const topGap = lerp(10, 20, s.t); // dock leaves room for the "ken.exe" label
+  // Hero on phones reserves room above the head for the speech bubble / scan HUD;
+  // the dock leaves room for its "ken.exe" label.
+  const topGap = lerp(s.narrow ? 124 : 10, 20, s.t);
   const bodyH = Math.max(40, r.h - bottomGap - topGap);
   return { bodyH, feetY: r.y + r.h - bottomGap, cx: r.x + r.w / 2 };
 }
@@ -522,6 +536,7 @@ export function Companion() {
     typingAt: 0,
     action: null,
     reducedMotion: false,
+    narrow: false,
   });
   const dom: DomRefs = {
     hit: useRef<HTMLButtonElement>(null),
@@ -608,7 +623,8 @@ export function Companion() {
       const cycle = (i - 1) % 3;
       if (cycle === 0) {
         play("scan");
-        say("Hold still. Running a quick identity check…", 2600);
+        // On phones the HUD uses the bubble's spot above the head, so skip the line.
+        if (!shared.current.narrow) say("Hold still. Running a quick identity check…", 2600);
       } else if (cycle === 1) {
         play("nod");
         say(QUIPS[Math.floor((i - 1) / 3) % QUIPS.length]);

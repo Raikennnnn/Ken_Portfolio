@@ -152,7 +152,7 @@ export function Hero({
       </div>
 
       {/* The 3D companion is drawn here while the hero is on screen (see Companion.tsx). */}
-      <div className="relative h-[380px] md:h-[min(74vh,640px)]">
+      <div className="relative h-[480px] md:h-[min(74vh,640px)]">
         <div id="avatar-slot" className="absolute inset-0" aria-hidden />
         <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none">
           <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
