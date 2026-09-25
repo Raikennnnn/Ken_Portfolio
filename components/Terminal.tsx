@@ -61,6 +61,8 @@ export function Terminal() {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
+  // Phones: fit the window into the visible area above the on-screen keyboard.
+  const [fit, setFit] = useState<{ top: number; height: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
@@ -105,7 +107,24 @@ export function Terminal() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [lines]);
+  }, [lines, fit]);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!open || !vv) return setFit(null);
+    const update = () => {
+      if (window.innerWidth >= 640) return setFit(null);
+      const gap = 10;
+      setFit({ top: vv.offsetTop + gap, height: Math.max(180, vv.height - gap * 2) });
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [open]);
 
   const goto = (id: string) => {
     setOpen(false);
@@ -137,8 +156,10 @@ export function Terminal() {
         print(
           ...HELP.map(([c, d]) => (
             <span>
-              <span className="inline-block w-[210px] text-[var(--fg)]">{c}</span>
-              <Muted>{d}</Muted>
+              <span className="block sm:inline-block sm:w-[210px] text-[var(--fg)]">{c}</span>
+              <span className="block pl-3 sm:inline sm:pl-0">
+                <Muted>{d}</Muted>
+              </span>
             </span>
           ))
         );
@@ -230,8 +251,10 @@ export function Terminal() {
                 const used = projectsUsing(s.name).map((p) => p.title);
                 return (
                   <span>
-                    <span className="inline-block w-[210px] text-[var(--fg)]">  {s.name}</span>
-                    <Muted>{used.length ? used.join(", ") : s.context}</Muted>
+                    <span className="block sm:inline-block sm:w-[210px] text-[var(--fg)]">  {s.name}</span>
+                    <span className="block pl-3 sm:inline sm:pl-0">
+                      <Muted>{used.length ? used.join(", ") : s.context}</Muted>
+                    </span>
                   </span>
                 );
               })
@@ -369,12 +392,13 @@ export function Terminal() {
 
   return (
     <>
-      <div className="fixed inset-0 z-[45] bg-[#03030a]/70 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
+      <div className="fixed inset-0 z-[60] bg-[#03030a]/70 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Terminal"
-        className="terminal-window fixed z-[47] left-1/2 top-[12vh] w-[min(720px,calc(100vw-24px))] -translate-x-1/2"
+        className="terminal-window fixed z-[62] left-1/2 top-[12vh] w-[min(720px,calc(100vw-24px))] -translate-x-1/2 flex flex-col"
+        style={fit ? { top: fit.top, height: fit.height } : undefined}
         onClick={() => inputRef.current?.focus()}
       >
         <div className="flex items-center gap-2 px-4 h-9 border-b border-[var(--border)]">
@@ -391,7 +415,10 @@ export function Terminal() {
           </button>
         </div>
 
-        <div ref={scrollRef} className="h-[min(56vh,440px)] overflow-y-auto px-4 py-3 font-mono text-[12px] leading-[1.7] text-[var(--fg-soft)]">
+        <div
+          ref={scrollRef}
+          className={`${fit ? "flex-1 min-h-0" : "h-[min(56vh,440px)]"} overflow-y-auto overscroll-contain px-4 py-3 font-mono text-[12px] leading-[1.7] text-[var(--fg-soft)]`}
+        >
           {lines.map((l) => (
             <div key={l.id} className="whitespace-pre-wrap break-words">
               {l.node}
@@ -414,7 +441,9 @@ export function Terminal() {
               autoComplete="off"
               autoCapitalize="off"
               aria-label="Command"
-              className="flex-1 bg-transparent outline-none text-[var(--fg)] caret-[var(--accent)]"
+              enterKeyHint="send"
+              // 16px on phones stops iOS Safari from zooming in on focus.
+              className="flex-1 min-w-0 bg-transparent outline-none text-[16px] sm:text-[12px] text-[var(--fg)] caret-[var(--accent)]"
             />
           </label>
         </div>
