@@ -102,6 +102,13 @@ export function Hero() {
           break.
         </p>
 
+        <div className="relative h-[265px] md:hidden" aria-hidden="true">
+          <span className="absolute bottom-6 left-0 max-w-[150px] font-mono text-[10px] uppercase tracking-[0.12em] leading-relaxed text-[var(--fg-muted)]">
+            // Interactive companion<br />
+            tap and scroll to see him react
+          </span>
+        </div>
+
         {/* Meta blocks */}
         <div className="mt-12 flex flex-wrap gap-6">
           {[

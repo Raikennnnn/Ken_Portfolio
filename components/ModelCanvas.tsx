@@ -8,6 +8,8 @@ import * as THREE from "three";
 type PageInteraction = {
   pointer: THREE.Vector2;
   pointerSeen: boolean;
+  hoverTarget: THREE.Vector2;
+  hoveringLink: boolean;
   clickTarget: THREE.Vector2;
   clickAt: number;
   scrollAt: number;
@@ -20,6 +22,8 @@ function usePageInteraction(onLinkClick: () => void) {
   const interaction = useRef<PageInteraction>({
     pointer: new THREE.Vector2(),
     pointerSeen: false,
+    hoverTarget: new THREE.Vector2(),
+    hoveringLink: false,
     clickTarget: new THREE.Vector2(),
     clickAt: -Infinity,
     scrollAt: -Infinity,
@@ -43,6 +47,19 @@ function usePageInteraction(onLinkClick: () => void) {
         1 - (event.clientY / window.innerHeight) * 2
       );
       state.pointerSeen = true;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      state.hoveringLink = Boolean(link);
+      if (link) {
+        const rect = link.getBoundingClientRect();
+        state.hoverTarget.set(
+          ((rect.left + rect.width / 2) / window.innerWidth) * 2 - 1,
+          1 - ((rect.top + rect.height / 2) / window.innerHeight) * 2
+        );
+      }
+    };
+    const onPointerLeave = () => {
+      state.pointerSeen = false;
+      state.hoveringLink = false;
     };
     const onScroll = () => {
       const nextY = window.scrollY;
@@ -71,11 +88,13 @@ function usePageInteraction(onLinkClick: () => void) {
 
     motionQuery.addEventListener("change", onMotionChange);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
+    document.addEventListener("pointerleave", onPointerLeave);
     window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("click", onClick, true);
     return () => {
       motionQuery.removeEventListener("change", onMotionChange);
       window.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerleave", onPointerLeave);
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("click", onClick, true);
     };
@@ -214,7 +233,7 @@ function CharacterModel({
   interaction: React.MutableRefObject<PageInteraction>;
 }) {
   const { scene, animations } = useGLTF("/models/character.glb");
-  const { viewport } = useThree();
+  const { viewport, size: canvasSize } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const smoothedPointer = useRef(new THREE.Vector2());
   const pointAmount = useRef(0);
@@ -231,6 +250,25 @@ function CharacterModel({
   // Clone the scene so React Three Fiber can manage it
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
+
+    // The asset only contains a left glove. Mirror its finished meshes under
+    // the empty right wrist so both hands follow the existing arm joints.
+    const leftWrist = clone.getObjectByName("wrist_L");
+    const rightWrist = clone.getObjectByName("wrist_R");
+    if (leftWrist && rightWrist && rightWrist.children.length === 0) {
+      const rightHand = new THREE.Group();
+      rightHand.name = "right_hand_restored";
+      rightHand.scale.x = -1;
+      leftWrist.children.forEach((part) => rightHand.add(part.clone(true)));
+      rightWrist.add(rightHand);
+    }
+
+    // The model's pivot is far from its geometry. Center it before turning
+    // toward the viewer, otherwise rotation swings it across the screen.
+    const bounds = new THREE.Box3().setFromObject(clone);
+    const center = bounds.getCenter(new THREE.Vector3());
+    clone.position.x -= center.x;
+    clone.position.z -= center.z;
 
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -285,18 +323,19 @@ function CharacterModel({
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
 
-    const targetHeight = 4;
+    const isMobile = canvasSize.width < 768;
+    const targetHeight = isMobile ? 2.2 : 4.5;
     const scale = targetHeight / size.y;
     baseScale.current = scale;
     groupRef.current.scale.setScalar(scale);
 
-    baseX.current = viewport.width * 0.28 - center.x * scale;
+    baseX.current = viewport.width * (isMobile ? 0.29 : 0.31) - center.x * scale;
     groupRef.current.position.x = baseX.current;
     baseZ.current = -center.z * scale;
     groupRef.current.position.z = baseZ.current;
-    baseY.current = -center.y * scale + (-size.y / 2) * scale + 0.2;
+    baseY.current = -center.y * scale + (-size.y / 2) * scale + (isMobile ? 0.2 : 1.85);
     groupRef.current.position.y = baseY.current;
-  }, [clonedScene, viewport.width]);
+  }, [canvasSize.width, clonedScene, viewport.width]);
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
@@ -308,12 +347,12 @@ function CharacterModel({
 
     smoothedPointer.current.lerp(
       page.pointer,
-      1 - Math.exp(-delta * 8)
+      1 - Math.exp(-delta * 5)
     );
     pointAmount.current = THREE.MathUtils.damp(
       pointAmount.current,
-      page.pointerSeen ? motion : 0,
-      7,
+      page.hoveringLink ? motion : 0,
+      6,
       delta
     );
     const scrollRecent = THREE.MathUtils.clamp(
@@ -329,13 +368,31 @@ function CharacterModel({
     );
 
     const clickAge = now - page.clickAt;
-    const approach = THREE.MathUtils.smoothstep(clickAge, 0, 0.28);
-    const retreat = 1 - THREE.MathUtils.smoothstep(clickAge, 0.65, 1.3);
+    const approach = THREE.MathUtils.smoothstep(clickAge, 0, 0.32);
+    const retreat = 1 - THREE.MathUtils.smoothstep(clickAge, 0.8, 1.55);
     const lunge = approach * retreat * motion;
-    const tap = Math.exp(-Math.pow((clickAge - 0.48) / 0.11, 2)) * motion;
-    const aimX = THREE.MathUtils.lerp(smoothedPointer.current.x, page.clickTarget.x, lunge) * motion;
-    const aimY = THREE.MathUtils.lerp(smoothedPointer.current.y, page.clickTarget.y, lunge) * motion;
+    const tap = Math.exp(-Math.pow((clickAge - 0.52) / 0.13, 2)) * motion;
+    const gazeX = (page.pointerSeen ? smoothedPointer.current.x : 0) * motion;
+    const gazeY = (page.pointerSeen ? smoothedPointer.current.y : 0) * motion;
+    const aimX = THREE.MathUtils.lerp(
+      page.hoveringLink ? page.hoverTarget.x : gazeX,
+      page.clickTarget.x,
+      lunge
+    ) * motion;
+    const aimY = THREE.MathUtils.lerp(
+      page.hoveringLink ? page.hoverTarget.y : gazeY,
+      page.clickTarget.y,
+      lunge
+    ) * motion;
     const scrollLean = scrollAmount.current * page.scrollDirection;
+    const scrollPhase = THREE.MathUtils.clamp((now - page.scrollAt) / 0.8, 0, 1);
+    const scrollHop = Math.sin(scrollPhase * Math.PI) * motion;
+    const wavePhase = (t + 1.5) % 8;
+    const wave = THREE.MathUtils.smoothstep(wavePhase, 0, 0.45)
+      * (1 - THREE.MathUtils.smoothstep(wavePhase, 1.65, 2.25))
+      * (1 - pointAmount.current) * (1 - lunge) * motion;
+    const waveSwing = Math.sin(t * 9) * wave;
+    const entrance = (1 - THREE.MathUtils.smoothstep(t, 0, 1.1)) * motion;
 
     const clickWorldX = page.clickTarget.x * viewport.width / 2;
     const clickMove = THREE.MathUtils.clamp(
@@ -345,26 +402,27 @@ function CharacterModel({
     ) * lunge;
     groupRef.current.position.x = THREE.MathUtils.damp(
       groupRef.current.position.x,
-      baseX.current + aimX * 0.12 + clickMove,
-      7,
+      baseX.current + gazeX * 0.16 + clickMove,
+      5,
       delta
     );
-    groupRef.current.position.y = baseY.current + Math.sin(t * 1.2) * 0.02 * motion
-      + scrollLean * 0.16 + lunge * 0.08;
-    groupRef.current.position.z = baseZ.current + lunge * 1.05;
-    groupRef.current.scale.setScalar(baseScale.current * (1 + lunge * 0.12));
+    groupRef.current.position.y = baseY.current + Math.sin(t * 1.3) * 0.035 * motion
+      + scrollHop * 0.24 - entrance * 0.55 + lunge * 0.1;
+    groupRef.current.position.z = baseZ.current + lunge * 1.25 + scrollHop * 0.16;
+    groupRef.current.scale.setScalar(baseScale.current * (1 + lunge * 0.15));
     groupRef.current.rotation.y = THREE.MathUtils.damp(
       groupRef.current.rotation.y,
-      aimX * 0.3 + scrollLean * 0.2,
-      6,
+      gazeX * 0.22 + scrollLean * 0.24 + lunge * (aimX < 0 ? -0.16 : 0.16),
+      5,
       delta
     );
     groupRef.current.rotation.x = THREE.MathUtils.damp(
       groupRef.current.rotation.x,
-      -aimY * 0.1 - lunge * 0.07 + scrollLean * 0.12,
-      6,
+      -gazeY * 0.06 - lunge * 0.12 + scrollLean * 0.1,
+      5,
       delta
     );
+    groupRef.current.rotation.z = scrollLean * 0.045 + waveSwing * 0.025;
 
     // The mixer restores the idle pose first; these rotations add gestures on top.
     const addPose = (joint: THREE.Object3D | undefined, x: number, y: number, z: number) => {
@@ -372,11 +430,14 @@ function CharacterModel({
       poseQuaternion.setFromEuler(poseEuler.set(x, y, z));
       joint.quaternion.multiply(poseQuaternion);
     };
-    addPose(joints.head, -aimY * 0.14 - scrollLean * 0.08, aimX * 0.22, aimX * 0.04);
-    addPose(joints.chest, scrollLean * 0.15 - lunge * 0.06, aimX * 0.07, scrollLean * 0.05);
-    addPose(joints.coatL, -scrollLean * 0.25, 0, scrollLean * 0.12);
-    addPose(joints.coatR, -scrollLean * 0.25, 0, -scrollLean * 0.12);
-    addPose(joints.coatBack, -scrollLean * 0.2, 0, 0);
+    addPose(joints.head, -gazeY * 0.19 - scrollLean * 0.12 + tap * 0.12,
+      gazeX * 0.3 + lunge * (aimX < 0 ? -0.1 : 0.1),
+      gazeX * 0.06 + waveSwing * 0.055);
+    addPose(joints.chest, scrollLean * 0.18 - lunge * 0.12,
+      gazeX * 0.1, scrollLean * 0.075 + waveSwing * 0.03);
+    addPose(joints.coatL, -scrollLean * 0.32 - scrollHop * 0.18, 0, scrollLean * 0.15);
+    addPose(joints.coatR, -scrollLean * 0.32 - scrollHop * 0.18, 0, -scrollLean * 0.15);
+    addPose(joints.coatBack, -scrollLean * 0.26 - scrollHop * 0.12, 0, 0);
 
     const shoulderX = (0.5 + groupRef.current.position.x / viewport.width) * window.innerWidth;
     const targetX = (aimX + 1) * window.innerWidth / 2;
@@ -386,21 +447,22 @@ function CharacterModel({
     const angle = Math.atan2(dx, -dy);
     const leftWeight = THREE.MathUtils.smoothstep(dx, -45, 45);
     const rightWeight = 1 - leftWeight;
-    const reach = Math.max(pointAmount.current, lunge);
+    const reach = Math.max(pointAmount.current * 0.75, lunge);
     addPose(joints.shoulderR,
-      (-0.6 * reach - 0.3 * tap) * rightWeight,
+      (-0.55 * reach - 0.32 * tap) * rightWeight - wave * 0.35,
       0,
-      THREE.MathUtils.clamp(angle, -2.55, -0.25) * reach * rightWeight
+      THREE.MathUtils.clamp(angle, -2.25, -0.3) * reach * rightWeight - wave * 1.15
     );
-    addPose(joints.elbowR, -0.2 * reach * rightWeight - 0.28 * tap * rightWeight, 0, 0);
-    addPose(joints.wristR, -0.12 * reach * rightWeight, 0, 0);
+    addPose(joints.elbowR, -0.25 * reach * rightWeight - 0.4 * tap * rightWeight - wave * 0.28,
+      0, waveSwing * 0.13);
+    addPose(joints.wristR, -0.15 * reach * rightWeight - wave * 0.1, 0, waveSwing * 0.2);
     addPose(joints.shoulderL,
-      (-0.6 * reach - 0.3 * tap) * leftWeight,
+      (-0.55 * reach - 0.32 * tap) * leftWeight - scrollHop * 0.12,
       0,
-      THREE.MathUtils.clamp(angle, 0.25, 2.55) * reach * leftWeight
+      THREE.MathUtils.clamp(angle, 0.3, 2.25) * reach * leftWeight + scrollHop * 0.4
     );
-    addPose(joints.elbowL, -0.2 * reach * leftWeight - 0.28 * tap * leftWeight, 0, 0);
-    addPose(joints.wristL, -0.12 * reach * leftWeight, 0, 0);
+    addPose(joints.elbowL, -0.25 * reach * leftWeight - 0.4 * tap * leftWeight, 0, 0);
+    addPose(joints.wristL, -0.15 * reach * leftWeight, 0, 0);
 
     const baseFade = THREE.MathUtils.clamp(1 - page.scrollY / window.innerHeight * 1.5, 0, 1);
     const fade = Math.max(baseFade, scrollAmount.current * 0.26, lunge * 0.85);
