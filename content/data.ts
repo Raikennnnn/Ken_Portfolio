@@ -39,7 +39,7 @@ export const profile = {
 };
 
 export const links: SocialLink[] = [
-  { label: "Email", href: "torreskennethraichen@gmail.com" },
+  { label: "Email", href: "mailto:torreskennethraichen@gmail.com?subject=Portfolio%20Inquiry" },
   { label: "GitHub", href: "https://github.com/Raikennnnn" },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/kenneth-rt/" },
 ];
