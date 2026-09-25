@@ -6,11 +6,14 @@ import type { Project } from "@/content/data";
 export function ProjectRow({
   project,
   delay = 0,
+  defaultOpen = false,
 }: {
   project: Project;
   delay?: number;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = `project-${project.index}`;
 
   return (
     <div
@@ -22,15 +25,21 @@ export function ProjectRow({
         className="grid w-full items-center gap-4 p-[18px_20px] md:p-[20px_24px] text-left group"
         style={{ gridTemplateColumns: "auto 1fr auto auto" }}
         aria-expanded={open}
+        aria-controls={panelId}
       >
         {/* Index */}
         <span className="font-mono text-xs text-[var(--accent)] font-semibold opacity-60">
           {project.index}
         </span>
 
-        {/* Title */}
-        <span className="font-display text-[1.15rem] md:text-[1.3rem] font-semibold tracking-tight transition-colors duration-300 group-hover:text-[var(--accent)]">
-          {project.title}
+        {/* Title + security count */}
+        <span className="flex items-center gap-3 min-w-0">
+          <span className="font-display text-[1.15rem] md:text-[1.3rem] font-semibold tracking-tight transition-colors duration-300 group-hover:text-[var(--accent)] truncate">
+            {project.title}
+          </span>
+          <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.08em] text-[var(--green)] border border-[color-mix(in_srgb,var(--green)_25%,transparent)] rounded px-1.5 py-0.5">
+            <span aria-hidden>✓</span> {project.security.length} security notes
+          </span>
         </span>
 
         {/* Role */}
@@ -54,49 +63,55 @@ export function ProjectRow({
         </span>
       </button>
 
-      {/* Expanded panel */}
+      {/* Expanded panel — grid-rows trick animates to the content's real height */}
       <div
-        className="overflow-hidden transition-all duration-500 ease-out"
-        style={{
-          maxHeight: open ? 300 : 0,
-          opacity: open ? 1 : 0,
-        }}
+        id={panelId}
+        className="grid transition-[grid-template-rows,opacity] duration-500 ease-out"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr", opacity: open ? 1 : 0 }}
       >
-        <div className="px-5 md:px-6 pb-5 flex flex-col md:flex-row md:justify-between gap-4">
-          <div>
-            <p className="text-[0.95rem] text-[var(--fg-soft)] leading-[1.7] max-w-[520px] mb-2.5">
-              {project.summary}
-            </p>
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {project.tags.map((t) => (
-                <span key={t} className="tag">
-                  {t}
-                </span>
-              ))}
+        <div className="overflow-hidden">
+          <div className="px-5 md:px-6 pb-6 grid md:grid-cols-[1fr_1fr] gap-6">
+            <div>
+              <p className="text-[0.95rem] text-[var(--fg-soft)] leading-[1.7] mb-4">
+                {project.summary}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {project.stack.map((t) => (
+                  <span key={t} className="tag">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-5">
+                {project.url && (
+                  <a href={project.url} target="_blank" rel="noreferrer" className="btn-cmd text-[10px] py-1.5 px-3">
+                    <span className="prompt">$</span> live
+                  </a>
+                )}
+                {project.repo && (
+                  <a href={project.repo} target="_blank" rel="noreferrer" className="btn-cmd text-[10px] py-1.5 px-3">
+                    <span className="prompt">$</span> repo
+                  </a>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="flex gap-2 flex-shrink-0 items-start">
-            {project.url && (
-              <a
-                href={project.url}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-cmd text-[10px] py-1.5 px-3"
-              >
-                <span className="prompt">$</span> live
-              </a>
-            )}
-            {project.repo && (
-              <a
-                href={project.repo}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-cmd text-[10px] py-1.5 px-3"
-              >
-                <span className="prompt">$</span> repo
-              </a>
-            )}
+            {/* Security notes */}
+            <div className="rounded-md border border-[var(--border)] bg-[var(--bg-terminal)] p-4">
+              <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--green)] mb-3">
+                $ audit --notes
+              </div>
+              <ul className="flex flex-col gap-2">
+                {project.security.map((s) => (
+                  <li key={s} className="flex gap-2.5 font-mono text-[11.5px] leading-[1.6] text-[var(--fg-soft)]">
+                    <span className="text-[var(--green)] shrink-0" aria-hidden>
+                      ✓
+                    </span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>
