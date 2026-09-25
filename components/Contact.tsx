@@ -44,7 +44,7 @@ export function Contact() {
             <a
               key={l.label}
               href={l.href}
-              target={l.href.startsWith("mailto:") ? "_self" : "_blank"}
+              target="_blank"
               rel="noreferrer"
               className="flex items-center justify-between px-4 py-3.5 border border-[var(--border)] rounded-lg bg-[var(--bg-soft)] no-underline text-inherit transition-all duration-300 hover:border-[var(--border-active)] hover:shadow-[0_2px_16px_var(--accent-glow)] group"
             >
@@ -52,11 +52,9 @@ export function Contact() {
                 {l.label}
               </span>
               <span className="font-mono text-xs text-[var(--fg-soft)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-2">
-                {l.href
-                  .replace(/^mailto:/, "")
-                  .replace(/^https?:\/\//, "")
-                  .replace(/\/$/, "")
-                  .split("?")[0]} 
+                {l.label === "Email"
+                  ? "torreskennethraichen@gmail.com"
+                  : l.href.replace(/^https?:\/\//, "").replace(/\/$/, "")}
                 <span className="inline-block transition-transform group-hover:translate-x-1">
                   &rarr;
                 </span>
