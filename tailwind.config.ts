@@ -1,23 +1,64 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./content/**/*.{ts,tsx}",
+  ],
   darkMode: "class",
-  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       fontFamily: {
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
-        serif: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
-        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"],
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
+        mono: ["var(--font-mono)"],
       },
       colors: {
-        ink: {
-          DEFAULT: "#111111",
-          soft: "#2a2a2a",
+        surface: {
+          DEFAULT: "var(--bg)",
+          soft: "var(--bg-soft)",
+          raised: "var(--bg-raised)",
+          terminal: "var(--bg-terminal)",
         },
-        paper: {
-          DEFAULT: "#f5f1e8",
-          soft: "#ebe5d4",
+        text: {
+          DEFAULT: "var(--fg)",
+          soft: "var(--fg-soft)",
+          muted: "var(--fg-muted)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          glow: "var(--accent-glow)",
+        },
+        accent2: {
+          DEFAULT: "var(--accent2)",
+          glow: "var(--accent2-glow)",
+        },
+        border: "var(--border)",
+        "border-active": "var(--border-active)",
+        sec: {
+          green: "var(--green)",
+          red: "var(--red)",
+          amber: "var(--amber)",
+        },
+      },
+      animation: {
+        blink: "blink 2s ease-in-out infinite",
+        "cursor-blink": "cursorBlink 1s step-end infinite",
+        "scroll-pulse": "scrollPulse 2s ease-in-out infinite",
+      },
+      keyframes: {
+        blink: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+        },
+        cursorBlink: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0" },
+        },
+        scrollPulse: {
+          "0%, 100%": { opacity: "0.3", transform: "scaleX(1)" },
+          "50%": { opacity: "1", transform: "scaleX(1.2)" },
         },
       },
     },
