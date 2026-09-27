@@ -1,83 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { toggleTerminal } from "@/lib/avatarBus";
+import { useEffect, useState } from "react";
+import { toggleTerminal } from "@/lib/terminalBus";
+import { ThemeToggle } from "./ThemeToggle";
+
+const NAV = [
+  { id: "work", label: "Work" },
+  { id: "security", label: "Security" },
+  { id: "skills", label: "Skills" },
+  { id: "activity", label: "Activity" },
+  { id: "about", label: "About" },
+  { id: "contact", label: "Contact" },
+];
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const [activeSection, setActiveSection] = useState("top");
+  const [active, setActive] = useState<string | null>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Track which section is in view
+  // The section crossing the middle of the viewport is "current".
   useEffect(() => {
-    const sections = document.querySelectorAll("section[id]");
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      // Only a thin band across the middle of the viewport counts as "current".
+      (entries) => entries.forEach((e) => e.isIntersecting && setActive(e.target.id)),
       { rootMargin: "-45% 0px -54% 0px" }
     );
-    sections.forEach((s) => observer.observe(s));
+    document.querySelectorAll("section[id]").forEach((s) => observer.observe(s));
     return () => observer.disconnect();
   }, []);
 
-  const navItems = ["work", "skills", "activity", "about", "contact"];
-
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${
+      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
         scrolled
-          ? "bg-[#060610]/85 backdrop-blur-2xl border-b border-[var(--border)]"
-          : "bg-transparent"
+          ? "bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] backdrop-blur-md border-b border-[var(--line)]"
+          : "border-b border-transparent"
       }`}
     >
-      <div className="mx-auto max-w-[1080px] px-5 md:px-10 flex items-center justify-between h-14">
-        {/* Handle + badge */}
-        <div className="flex items-center gap-3">
-          <a href="#top" className="font-mono text-xs font-medium tracking-wider text-[var(--accent)]">
-            ken@sec
-          </a>
+      <div className="mx-auto max-w-[1120px] px-5 md:px-8 h-16 flex items-center gap-6">
+        <a href="#top" className="flex items-center gap-3 shrink-0" aria-label="Ken — back to top">
           <span
-            className="sec-badge"
-            title="Served with CSP, HSTS, X-Frame-Options, strict Referrer- and Permissions-Policy"
+            className="kanji w-8 h-8 grid place-items-center border border-[var(--red-line)] text-[var(--red)] text-[15px] tracking-normal"
+            lang="ja"
+            title="検 (ken) — to inspect"
           >
-            <span className="sec-dot" />
-            secure
+            検
           </span>
-        </div>
+          <span className="leading-tight">
+            <span className="block font-serif text-[15px] font-medium">Ken</span>
+            <span className="label block text-[9.5px]">Cybersecurity</span>
+          </span>
+        </a>
 
-        {/* Nav links */}
-        <nav className="hidden md:flex items-center">
-          {navItems.map((item) => (
-            <a
-              key={item}
-              href={`#${item}`}
-              className={`font-mono text-[11px] tracking-wider px-3.5 py-1.5 rounded transition-colors duration-250 ${
-                activeSection === item
-                  ? "text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"
-                  : "text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--accent-glow)]"
-              }`}
-            >
-              ./{item}
-            </a>
-          ))}
+        <nav className="hidden lg:flex items-center gap-1 mx-auto" aria-label="Sections">
+          {NAV.map((item, i) => {
+            const current = active === item.id;
+            return (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                aria-current={current ? "true" : undefined}
+                className={`group flex items-baseline gap-1.5 px-3 py-1.5 text-[13px] transition-colors ${
+                  current ? "text-[var(--fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
+                }`}
+              >
+                <span className={`font-mono text-[10px] ${current ? "text-[var(--red)]" : "text-[var(--fg-dim)]"}`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                {item.label}
+              </a>
+            );
+          })}
         </nav>
 
-        {/* CTA */}
-        <button onClick={() => toggleTerminal(true)} className="btn-cmd" aria-label="Open terminal (Ctrl+K)">
-          <span className="prompt">&gt;_</span> terminal
-          <kbd className="kbd hidden sm:inline-flex">Ctrl K</kbd>
-        </button>
+        <div className="flex items-center gap-2 ml-auto lg:ml-0">
+          <ThemeToggle />
+          <button type="button" onClick={() => toggleTerminal(true)} className="btn" aria-label="Open terminal (Ctrl+K)">
+            <span className="text-[var(--red)]">&gt;_</span>
+            <span className="hidden sm:inline">Terminal</span>
+            <kbd className="kbd hidden md:inline-flex">Ctrl K</kbd>
+          </button>
+        </div>
       </div>
     </header>
   );
