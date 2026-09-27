@@ -310,21 +310,6 @@ body {
   border: 1px solid var(--line);
   cursor: pointer;
 }
-.scan-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--red);
-  opacity: 0.35;
-  pointer-events: none;
-  animation: scanDown 4s linear infinite;
-}
-@keyframes scanDown {
-  from { top: 0%; }
-  to { top: 100%; }
-}
-
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
