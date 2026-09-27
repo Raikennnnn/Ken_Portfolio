@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  profile, projects, skills, links, certifications, writeups, securityTesting, projectsUsing,
+  profile, projects, skills, links, certifications, writeups, assessments, securityChecks, securityTools, projectsUsing,
 } from "@/content/data";
 import { onToggleTerminal } from "@/lib/terminalBus";
 import { getTheme, setTheme } from "@/lib/theme";
@@ -16,7 +16,7 @@ const HELP: [string, string][] = [
   ["whoami", "who is this"],
   ["projects", "list projects"],
   ["open <n>", "details and security notes for project n"],
-  ["security", "how I security-test my work"],
+  ["security [n]", "systems I've security-tested / details for n"],
   ["skills", "skills and where they are used"],
   ["contact", "ways to reach me"],
   ["github | linkedin | email", "open a link"],
@@ -221,16 +221,34 @@ export function Terminal() {
         break;
       }
 
-      case "security":
+      case "security": {
+        if (!arg) {
+          print(
+            ...assessments.map((a, i) => (
+              <span>
+                <Red>[{i + 1}]</Red> {a.target} <Dim>· {a.type} · {a.year} · {a.checks.length} checks</Dim>
+              </span>
+            )),
+            <Dim>type security 1 for details</Dim>
+          );
+          break;
+        }
+        const n = Number(arg);
+        const a = assessments[n - 1] ?? assessments.find((x) => x.target.toLowerCase().includes(arg.toLowerCase()));
+        if (!a) {
+          print(<Dim>security: no assessment “{arg}”. try security</Dim>);
+          break;
+        }
         print(
-          <span>Target: {securityTesting.target}</span>,
-          <Dim>{securityTesting.scope}</Dim>,
+          <span>{a.target} <Dim>· {a.type} · {a.year}</Dim></span>,
+          <Dim>{a.scope}</Dim>,
           <Red>tools</Red>,
-          ...securityTesting.tools.map((t) => <Row left={`  ${t.name}`} right={t.role} />),
+          ...a.tools.map((t) => <Row left={`  ${t}`} right={securityTools[t]} />),
           <Red>checks</Red>,
-          ...securityTesting.checks.map((c) => <Row left={`  ${c.name}`} right={c.looksFor} />)
+          ...a.checks.map((c) => <Row left={`  ${c}`} right={securityChecks[c]} />)
         );
         break;
+      }
 
       case "skills": {
         const groups = [
@@ -322,6 +340,7 @@ export function Terminal() {
       : cmd === "cat" ? FILES
       : cmd === "theme" ? ["dark", "light"]
       : cmd === "open" ? projects.map((_, i) => String(i + 1))
+      : cmd === "security" ? assessments.map((_, i) => String(i + 1))
       : [];
     const matches = pool.filter((p) => p.startsWith(partial));
     if (matches.length === 1) setInput(`${cmd} ${matches[0]}`);

@@ -20,13 +20,13 @@ Next.js 14 + Tailwind.
 ## What's on the page
 
 - **Selected work** — each project lists concrete security decisions found in its code.
-- **Security testing** — the tools used (OWASP ZAP, Burp Suite, Postman, Chrome DevTools) and
-  the attack classes checked on our own system. Only what has actually been done.
+- **Security testing** — one expandable entry per system tested (same pattern as projects):
+  scope, tools used and checks performed. Only what has actually been done.
 - **Capabilities** — every skill links to the project that uses it. No percentage bars.
 - **Activity** — live repository feed, fetched server-side and cached for an hour (`lib/github.ts`).
 - **About** — dithered portrait that reveals the photo on hover/tap.
 - **Terminal** — `Ctrl/⌘ K`, `/` or the header button. `help`, `projects`, `open 1`,
-  `security`, `skills`, `goto about`, `theme light`.
+  `security 1`, `skills`, `goto about`, `theme light`.
 
 ## Editing content
 
@@ -35,7 +35,8 @@ Everything lives in **`content/data.ts`**. Rule of thumb: only list what you hav
 | Field | What it does |
 | --- | --- |
 | `profile` | Headline, intro, bio, focus rows |
-| `securityTesting` | Target, scope, tools and checks in the Security section |
+| `assessments` | One entry per system you security-tested (target, scope, tools, checks) |
+| `securityTools` / `securityChecks` | Catalogs with one-line descriptions; assessments reference them by name |
 | `projects[].stack` | Skill names — this links skills to projects |
 | `projects[].security` | The "security notes" list for each project |
 | `certifications` / `writeups` | Add an entry and its block appears (link a verify page) |

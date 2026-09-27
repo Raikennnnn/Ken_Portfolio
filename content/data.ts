@@ -71,29 +71,70 @@ export const links: SocialLink[] = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/kenneth-rt/" },
 ];
 
-/**
- * Security testing done on our own system. Keep this factual:
- * list the tools used and the attack classes checked — not results you can't show.
- */
-export const securityTesting = {
-  target: "IntelliDocs",
-  scope: "Authorized testing of a system our team built. No third-party targets.",
-  tools: [
-    { name: "OWASP ZAP", role: "Web application scanner" },
-    { name: "Burp Suite", role: "Intercepting proxy" },
-    { name: "Postman", role: "Crafted API requests" },
-    { name: "Chrome DevTools", role: "Requests, cookies and storage" },
-  ],
-  checks: [
-    { name: "SQL injection", looksFor: "Queries built from user input" },
-    { name: "Cross-site scripting", looksFor: "Scripts injected through inputs and URLs" },
-    { name: "Input validation & manipulation", looksFor: "Tampered, oversized or unexpected values" },
-    { name: "Brute force", looksFor: "Repeated login attempts" },
-    { name: "Session hijacking", looksFor: "Exposed or stolen session identifiers" },
-    { name: "Session reuse", looksFor: "Sessions still valid after logout" },
-    { name: "DDoS / request flooding", looksFor: "High request volume against endpoints" },
-  ],
+// ---------------------------------------------------------------------
+//  Security testing
+//  One entry per system you have tested. Tools and checks are named from
+//  the catalogs below, so a new assessment only lists what you actually ran.
+//  Keep it factual: what was tested and how — not results you can't show.
+// ---------------------------------------------------------------------
+
+export const securityTools = {
+  "OWASP ZAP": "Web application scanner",
+  "Burp Suite": "Intercepting proxy",
+  "Postman": "Crafted API requests",
+  "Chrome DevTools": "Requests, cookies and storage",
+} as const;
+
+export const securityChecks = {
+  "SQL injection": "Queries built from user input",
+  "Cross-site scripting": "Scripts injected through inputs and URLs",
+  "Input validation & manipulation": "Tampered, oversized or unexpected values",
+  "Brute force": "Repeated login attempts",
+  "Session hijacking": "Exposed or stolen session identifiers",
+  "Session reuse": "Sessions still valid after logout",
+  "DDoS / request flooding": "High request volume against endpoints",
+} as const;
+
+export type SecurityTool = keyof typeof securityTools;
+export type SecurityCheck = keyof typeof securityChecks;
+
+export type Assessment = {
+  index: string;
+  target: string;
+  /** e.g. "Web application", "API", "Game server" */
+  type: string;
+  year: string;
+  /** How you were allowed to test it. */
+  scope: string;
+  summary: string;
+  tools: SecurityTool[];
+  checks: SecurityCheck[];
+  url?: string;
+  repo?: string;
 };
+
+export const assessments: Assessment[] = [
+  {
+    index: "01",
+    target: "IntelliDocs",
+    type: "Web application",
+    year: "2026",
+    scope: "Authorized testing of a system our team built. No third-party targets.",
+    summary:
+      "Tested the enrollment system's web app and PHP API the way an attacker would look at it: intercepting requests, tampering with input and probing authentication and sessions.",
+    tools: ["OWASP ZAP", "Burp Suite", "Postman", "Chrome DevTools"],
+    checks: [
+      "SQL injection",
+      "Cross-site scripting",
+      "Input validation & manipulation",
+      "Brute force",
+      "Session hijacking",
+      "Session reuse",
+      "DDoS / request flooding",
+    ],
+    repo: "https://github.com/Raikennnnn/IntelliDocs",
+  },
+];
 
 export const skills: Skill[] = [
   // Languages
