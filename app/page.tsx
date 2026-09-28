@@ -1,42 +1,53 @@
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
-import { Work } from "@/components/Work";
+import { Work, type OtherRepo } from "@/components/Work";
+import { Security } from "@/components/Security";
+import { Ctf } from "@/components/Ctf";
 import { Skills } from "@/components/Skills";
-import { Activity } from "@/components/Activity";
 import { About } from "@/components/About";
+import { Experience } from "@/components/Experience";
+import { Credentials } from "@/components/Credentials";
 import { Contact } from "@/components/Contact";
-import { NetworkCanvas } from "@/components/NetworkCanvas";
-import { CompanionLoader } from "@/components/CompanionLoader";
 import { Terminal } from "@/components/Terminal";
-import { profile } from "@/content/data";
-import { getGithubSnapshot, timeAgo } from "@/lib/github";
+import { SoundEffects } from "@/components/Sound";
+import { Room } from "@/components/Room";
+import { profile, projects } from "@/content/data";
+import { getRepos, timeAgo } from "@/lib/github";
 
 // Re-render at most hourly so the GitHub data stays fresh.
 export const revalidate = 3600;
 
+const key = (url: string) => url.toLowerCase().replace(/\/$/, "");
+
 export default async function Page() {
-  const github = await getGithubSnapshot(profile.github);
-  const lastPush = github?.repos[0] ? timeAgo(github.repos[0].pushedAt) : null;
+  const repos = (await getRepos(profile.github)) ?? [];
+  const projectRepos = new Set(projects.flatMap((p) => (p.repo ? [key(p.repo)] : [])));
+
+  // Formatted here so server and client render the same text.
+  const lastPush: Record<string, string> = {};
+  const others: OtherRepo[] = [];
+  for (const r of repos) {
+    if (projectRepos.has(key(r.url))) lastPush[key(r.url)] = timeAgo(r.pushedAt);
+    else others.push({ name: r.name, description: r.description, language: r.language, url: r.url, ago: timeAgo(r.pushedAt) });
+  }
 
   return (
     <>
-      {/* Network topology background */}
-      <NetworkCanvas />
-
       <Header />
-
-      <main className="mx-auto max-w-[1080px] px-5 md:px-10 relative z-10">
-        <Hero lastPush={lastPush} publicRepos={github?.publicRepos ?? null} />
-        <Work />
-        <Skills />
-        <Activity user={profile.github} snapshot={github} />
+      <main className="mx-auto max-w-[1120px] px-5 md:px-8">
+        <Hero />
         <About />
+        <Experience />
+        <Work lastPush={lastPush} others={others} />
+        <Security />
+        <Credentials />
+        <Skills />
+        <Ctf />
         <Contact />
       </main>
-
-      {/* 3D companion (hero → corner dock) and the Ctrl+K terminal */}
-      <CompanionLoader />
       <Terminal />
+      <Room />
+      <SoundEffects />
     </>
   );
 }

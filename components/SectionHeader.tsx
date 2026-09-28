@@ -1,28 +1,10 @@
-import { shortHash } from "@/lib/hash";
-
-/** Numbered section header. The "sha" is a real digest of `hashOf` (the section's content). */
-export function SectionHeader({
-  id,
-  label,
-  hashOf,
-}: {
-  id: string;
-  label: string;
-  hashOf?: unknown;
-}) {
+/** Numbered section header: index, title and a hairline to the right edge. */
+export function SectionHeader({ index, title }: { index: string; title: string }) {
   return (
-    <div className="section-header">
-      <span className="section-id">{id}</span>
-      <h2 className="section-label">{label}</h2>
-      <div className="section-line" />
-      {hashOf !== undefined && (
-        <span
-          className="section-hash hidden sm:inline"
-          title="FNV-1a digest of this section's content"
-        >
-          sha:{shortHash(JSON.stringify(hashOf))}
-        </span>
-      )}
+    <div className="flex items-center gap-4 mb-10 md:mb-12">
+      <span className="font-mono text-[11px] text-[var(--red)]">{index}</span>
+      <h2 className="font-serif text-[1.35rem] md:text-[1.5rem] font-medium tracking-tight">{title}</h2>
+      <span className="flex-1 h-px bg-[var(--line)]" aria-hidden />
     </div>
   );
 }

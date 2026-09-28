@@ -28,11 +28,16 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // CTF flag 3 of 5 (see lib/ctf.ts). Harmless by design.
+  { key: "X-Ken-Flag", value: "flag{headers_tell_stories}" },
 ];
 
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The site never uses next/image; switching the optimiser off removes the /_next/image
+  // endpoint and its attack surface.
+  images: { unoptimized: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

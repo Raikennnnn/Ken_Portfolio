@@ -1,88 +1,66 @@
 "use client";
 
-import { links, meta } from "@/content/data";
+import { links } from "@/content/data";
 import { useInView } from "@/lib/useInView";
-import { toggleTerminal } from "@/lib/avatarBus";
+import { toggleTerminal } from "@/lib/terminalBus";
 import { SectionHeader } from "./SectionHeader";
+
+const display = (href: string) =>
+  href.replace(/^mailto:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "").split("?")[0];
 
 export function Contact() {
   const { ref, inView } = useInView();
+  const email = links.find((l) => l.href.startsWith("mailto:"));
 
   return (
-    <section id="contact" className="py-16 md:py-24 scroll-mt-16" ref={ref}>
-      <SectionHeader id="05" label="Connect" />
+    <section id="contact" ref={ref} className="pt-20 md:pt-28 scroll-mt-16">
+      <SectionHeader index="08" title="Contact" />
 
-      <div
-        className={`grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-8 transition-all duration-700 ${
-          inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        }`}
-      >
-        {/* CTA */}
+      <div className={`reveal ${inView ? "in" : ""} grid md:grid-cols-[1.2fr_1fr] gap-10 md:gap-14`}>
         <div>
-          <h2 className="font-display text-[clamp(1.6rem,3.5vw,2.5rem)] font-bold leading-[1.15] tracking-tight mb-4 [text-wrap:balance]">
-            Establish a secure connection.
-          </h2>
-          <p className="text-base text-[var(--fg-soft)] mb-7">
-            Got a project, a question, or a CTF team that needs one more? Send a
-            packet.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href={links.find((l) => l.href.startsWith("mailto:"))?.href}
-              className="btn-cmd py-2.5 px-6 border-[var(--border-active)] text-[var(--fg)]"
-            >
-              <span className="prompt">$</span> <span>init --handshake</span>
-            </a>
-            <button onClick={() => toggleTerminal(true)} className="btn-cmd py-2.5 px-5">
-              <span className="prompt">&gt;_</span> terminal
+          <h3 className="font-serif font-medium text-[clamp(1.7rem,3.4vw,2.5rem)] leading-[1.15] tracking-tight [text-wrap:balance]">
+            Questions, projects or opportunities: my inbox is open.
+          </h3>
+          <div className="mt-8 flex flex-wrap gap-3">
+            {email && (
+              <a href={email.href} className="btn btn-primary">
+                Email me
+              </a>
+            )}
+            <button type="button" onClick={() => toggleTerminal(true)} className="btn">
+              <span className="text-[var(--red)]">&gt;_</span> Terminal
             </button>
           </div>
         </div>
 
-        {/* Links */}
-        <div className="flex flex-col gap-2">
+        <ul className="border-t border-[var(--line)] self-start">
           {links.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              target={l.href.startsWith("mailto:") ? undefined : "_blank"}
-              rel="noreferrer"
-              className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3.5 border border-[var(--border)] rounded-lg bg-[var(--bg-soft)] no-underline text-inherit transition-all duration-300 hover:border-[var(--border-active)] hover:shadow-[0_2px_16px_var(--accent-glow)] group"
-            >
-              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--fg-muted)] group-hover:text-[var(--accent)] transition-colors">
-                {l.label}
-              </span>
-              <span className="font-mono text-xs text-[var(--fg-soft)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-2 min-w-0 max-w-full break-all sm:text-right">
-                {l.href
-                  .replace(/^mailto:/, "")
-                  .replace(/^https?:\/\//, "")
-                  .replace(/\/$/, "")
-                  .split("?")[0]}
-                <span className="inline-block transition-transform group-hover:translate-x-1">
-                  &rarr;
+            <li key={l.label} className="border-b border-[var(--line)]">
+              <a
+                href={l.href}
+                target={l.href.startsWith("mailto:") ? undefined : "_blank"}
+                rel="noreferrer"
+                className="group flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between py-4"
+              >
+                <span className="label group-hover:text-[var(--red)] transition-colors">{l.label}</span>
+                <span className="text-[0.93rem] break-all sm:text-right group-hover:text-[var(--red)] transition-colors">
+                  {display(l.href)} <span aria-hidden>↗</span>
                 </span>
-              </span>
-            </a>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
-      {/* Footer */}
-      {/* Bottom padding keeps the footer clear of the docked companion when the side margin is too narrow for it. */}
-      <div className="mt-20 pt-6 pb-[190px] min-[1440px]:pb-8 border-t border-[var(--border)]">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 font-mono text-[10px] text-[var(--fg-muted)]">
-          <span>{meta.copy}</span>
-          <span className="flex items-center gap-4">
-            <a href="/.well-known/security.txt" className="hover:text-[var(--accent)] transition-colors">
-              security.txt
-            </a>
-            <span className="flex items-center gap-2">
-              Next.js + Three.js + Vercel
-              <span className="sec-dot" />
-            </span>
-          </span>
-        </div>
-      </div>
+      <footer className="mt-24 py-8 border-t border-[var(--line)] flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <span className="label">© {new Date().getFullYear()} Ken</span>
+        <span className="flex items-center gap-5">
+          <a href="/.well-known/security.txt" className="label hover:text-[var(--red)] transition-colors">
+            security.txt
+          </a>
+          <span className="label">Next.js · Vercel</span>
+        </span>
+      </footer>
     </section>
   );
 }
