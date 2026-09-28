@@ -3,6 +3,7 @@
 import { profile } from "@/content/data";
 import { toggleTerminal } from "@/lib/terminalBus";
 import { VisitInspector } from "./VisitInspector";
+import { Rain } from "./Rain";
 
 export function Hero() {
   const [line1, line2] = profile.headline;
@@ -11,8 +12,9 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="min-h-[100svh] grid lg:grid-cols-[1.3fr_1fr] items-center gap-10 lg:gap-14 pt-28 pb-16"
+      className="relative min-h-[100svh] grid lg:grid-cols-[1.3fr_1fr] items-center gap-10 lg:gap-14 pt-28 pb-16"
     >
+      <Rain />
       <div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8">
           <span className="label text-[var(--fg-muted)]">{profile.title} student</span>
