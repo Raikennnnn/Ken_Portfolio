@@ -4,6 +4,10 @@ import { profile, projects, writeups } from "@/content/data";
 import { ProjectRow } from "./ProjectRow";
 import { SectionHeader } from "./SectionHeader";
 import { useInView } from "@/lib/useInView";
+import type { HoneypotSummary } from "@/lib/honeypot";
+
+/** Live data for projects with `live` set, fetched server-side in app/page.tsx. */
+export type LiveData = { honeypot: HoneypotSummary | null; honeypotUpdated?: string };
 
 /** A public repository that isn't one of the listed projects. */
 export type OtherRepo = {
@@ -14,7 +18,15 @@ export type OtherRepo = {
   ago: string;
 };
 
-export function Work({ lastPush, others }: { lastPush: Record<string, string>; others: OtherRepo[] }) {
+export function Work({
+  lastPush,
+  others,
+  live,
+}: {
+  lastPush: Record<string, string>;
+  others: OtherRepo[];
+  live: LiveData;
+}) {
   const { ref, inView } = useInView();
 
   return (
@@ -27,6 +39,7 @@ export function Work({ lastPush, others }: { lastPush: Record<string, string>; o
             key={p.index}
             project={p}
             lastPush={p.repo ? lastPush[p.repo.toLowerCase().replace(/\/$/, "")] : undefined}
+            live={p.live ? live : undefined}
           />
         ))}
       </div>

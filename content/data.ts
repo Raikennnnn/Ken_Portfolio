@@ -16,6 +16,10 @@ export type Project = {
   security: string[];
   url?: string;
   repo?: string;
+  /** Shows a live data block in the row (fetched server-side). */
+  live?: "honeypot";
+  /** Not done yet: only shown when NEXT_PUBLIC_SHOW_DRAFTS=1 (local previews). */
+  draft?: boolean;
 };
 
 export type SocialLink = {
@@ -195,7 +199,7 @@ export const skills: Skill[] = [
   { name: "Gemini", category: "ai" },
 ];
 
-export const projects: Project[] = [
+const allProjects: Project[] = [
   {
     index: "01",
     title: "IntelliDocs",
@@ -247,7 +251,28 @@ export const projects: Project[] = [
     ],
     repo: "https://github.com/Raikennnnn/Ken_Portfolio",
   },
+  {
+    index: "04",
+    title: "Higanbana",
+    year: "2026",
+    role: "SSH honeypot threat intel",
+    stack: ["Python", "PostgreSQL", "Docker", "MITRE ATT&CK", "Threat modeling"],
+    summary:
+      "Named after the red spider lily (彼岸花), planted around Japanese rice fields because its poisonous bulbs keep pests away. A pipeline that turns SSH honeypot logs into explainable threat intel: it deduplicates Cowrie events, labels each session with rules mapped to MITRE ATT&CK, and publishes only aggregated numbers. It currently analyses the public CyberLab honeynet dataset (about 50 Cowrie honeypots, IPs pseudonymised by its authors). My own hardened sensor is built and firewall-tested, and goes live when I have cloud access.",
+    security: [
+      "Every log line is treated as hostile: size limits, type checks, parameterised SQL only",
+      "Public output is aggregates only, with no IPs, commands or URLs; a test checks that none leak into the export",
+      "A password is shown only if 20+ different sources tried it, so real leaked credentials stay out",
+      "This block is validated server-side before it renders; bad data hides it instead of breaking the page",
+      "Sensor design: all outbound traffic blocked and SSH forwarding off, so it can't be used against anyone else",
+    ],
+    live: "honeypot",
+  },
 ];
+
+export const projects: Project[] = allProjects.filter(
+  (p) => !p.draft || process.env.NEXT_PUBLIC_SHOW_DRAFTS === "1",
+);
 
 // Only real roles. One entry is fine; don't pad it.
 export const experience: Experience[] = [

@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "generated_at": "2026-09-28T21:02:08Z",
+  "source": {
+    "kind": "dataset",
+    "name": "CyberLab honeynet dataset",
+    "url": "https://doi.org/10.5281/zenodo.3687527",
+    "license": "CC BY 4.0"
+  },
+  "window": {
+    "start": "2019-05-18T00:00:00Z",
+    "end": "2019-05-19T00:00:00Z"
+  },
+  "totals": {
+    "sessions": 7465,
+    "login_attempts": 7077,
+    "unique_sources": 180,
+    "commands": 326,
+    "countries": 34
+  },
+  "series": {
+    "unit": "hour",
+    "points": [
+      {
+        "t": "2019-05-18T00:00:00Z",
+        "sessions": 357
+      },
+      {
+        "t": "2019-05-18T01:00:00Z",
+        "sessions": 356
+      },
+      {
+        "t": "2019-05-18T02:00:00Z",
+        "sessions": 296
+      },
+      {
+        "t": "2019-05-18T03:00:00Z",
+        "sessions": 259
+      },
+      {
+        "t": "2019-05-18T04:00:00Z",
+        "sessions": 379
+      },
+      {
+        "t": "2019-05-18T05:00:00Z",
+        "sessions": 405
+      },
+      {
+        "t": "2019-05-18T06:00:00Z",
+        "sessions": 334
+      },
+      {
+        "t": "2019-05-18T07:00:00Z",
+        "sessions": 277
+      },
+      {
+        "t": "2019-05-18T08:00:00Z",
+        "sessions": 299
+      },
+      {
+        "t": "2019-05-18T09:00:00Z",
+        "sessions": 421
+      },
+      {
+        "t": "2019-05-18T10:00:00Z",
+        "sessions": 359
+      },
+      {
+        "t": "2019-05-18T11:00:00Z",
+        "sessions": 83
+      },
+      {
+        "t": "2019-05-18T12:00:00Z",
+        "sessions": 125
+      },
+      {
+        "t": "2019-05-18T13:00:00Z",
+        "sessions": 283
+      },
+      {
+        "t": "2019-05-18T14:00:00Z",
+        "sessions": 267
+      },
+      {
+        "t": "2019-05-18T15:00:00Z",
+        "sessions": 262
+      },
+      {
+        "t": "2019-05-18T16:00:00Z",
+        "sessions": 302
+      },
+      {
+        "t": "2019-05-18T17:00:00Z",
+        "sessions": 338
+      },
+      {
+        "t": "2019-05-18T18:00:00Z",
+        "sessions": 315
+      },
+      {
+        "t": "2019-05-18T19:00:00Z",
+        "sessions": 315
+      },
+      {
+        "t": "2019-05-18T20:00:00Z",
+        "sessions": 362
+      },
+      {
+        "t": "2019-05-18T21:00:00Z",
+        "sessions": 424
+      },
+      {
+        "t": "2019-05-18T22:00:00Z",
+        "sessions": 376
+      },
+      {
+        "t": "2019-05-18T23:00:00Z",
+        "sessions": 271
+      }
+    ]
+  },
+  "outcomes": {
+    "no_login_attempt": 2178,
+    "login_failed": 233,
+    "login_no_commands": 5014,
+    "ran_commands": 40
+  },
+  "behaviours": [
+    {
+      "attack": "T1110",
+      "label": "Brute force",
+      "sessions": 97,
+      "share": 0.013
+    },
+    {
+      "attack": "T1090",
+      "label": "Proxy attempt",
+      "sessions": 78,
+      "share": 0.01
+    },
+    {
+      "attack": "T1105",
+      "label": "Tool transfer attempt",
+      "sessions": 29,
+      "share": 0.004
+    },
+    {
+      "attack": "T1082",
+      "label": "System discovery",
+      "sessions": 10,
+      "share": 0.001
+    },
+    {
+      "attack": "T1098.004",
+      "label": "SSH key persistence",
+      "sessions": 10,
+      "share": 0.001
+    }
+  ],
+  "top_countries": [
+    {
+      "name": "Ireland",
+      "share": 0.527
+    },
+    {
+      "name": "Russia",
+      "share": 0.177
+    },
+    {
+      "name": "Czechia",
+      "share": 0.165
+    },
+    {
+      "name": "Netherlands",
+      "share": 0.053
+    },
+    {
+      "name": "China",
+      "share": 0.01
+    }
+  ],
+  "passwords": [
+    "admin"
+  ],
+  "password_min_sources": 20
+}
