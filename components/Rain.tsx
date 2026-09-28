@@ -12,8 +12,9 @@ const MAX_DROPS = 200;
 /**
  * Thin slanted rain behind the hero, after the NINJA GAIDEN 4 menus.
  * Each drop gets a random depth: far drops are short, slow and faint.
- * Dark ink on the light theme reads as scratches, so it is fainter there. It pauses when the hero is
- * off screen or the tab is hidden, and doesn't run at all with reduced motion.
+ * On the light theme near-black ink reads as scratches, so it uses the softer muted grey there,
+ * drawn a little stronger to stay visible. It pauses when the hero is off screen or the tab is
+ * hidden, and doesn't run at all with reduced motion.
  */
 export function Rain() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,9 +30,10 @@ export function Rain() {
 
     const readColors = () => {
       const css = getComputedStyle(document.documentElement);
-      ink = css.getPropertyValue("--fg").trim();
+      const light = document.documentElement.dataset.theme === "light";
+      ink = css.getPropertyValue(light ? "--fg-muted" : "--fg").trim();
       red = css.getPropertyValue("--red").trim();
-      fade = document.documentElement.dataset.theme === "light" ? 0.55 : 1;
+      fade = light ? 1.5 : 1;
     };
 
     const spawn = (anywhere: boolean): Drop => {
@@ -67,7 +69,7 @@ export function Rain() {
         d.y += d.speed * dt;
         d.x += d.speed * SLANT * dt;
         if (d.y - d.len > h) drops[i] = spawn(false);
-        ctx.globalAlpha = (d.red ? d.alpha * 2.2 : d.alpha) * fade;
+        ctx.globalAlpha = d.red ? d.alpha * 2.2 : d.alpha * fade; // red is already strong on both themes
         ctx.strokeStyle = d.red ? red : ink;
         ctx.beginPath();
         ctx.moveTo(d.x, d.y);
