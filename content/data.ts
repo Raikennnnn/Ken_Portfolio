@@ -264,6 +264,7 @@ export const projects: Project[] = [
       "This block is validated server-side before it renders; bad data hides it instead of breaking the page",
       "Sensor design: all outbound traffic blocked and SSH forwarding off, so it can't be used against anyone else",
     ],
+    repo: "https://github.com/Raikennnnn/Higanbana",
     live: "honeypot",
   },
 ];
