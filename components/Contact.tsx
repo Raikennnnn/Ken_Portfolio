@@ -1,6 +1,6 @@
 "use client";
 
-import { links } from "@/content/data";
+import { links, site } from "@/content/data";
 import { useInView } from "@/lib/useInView";
 import { toggleTerminal } from "@/lib/terminalBus";
 import { SectionHeader } from "./SectionHeader";
@@ -55,6 +55,9 @@ export function Contact() {
       <footer className="mt-24 py-8 border-t border-[var(--line)] flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <span className="label">© {new Date().getFullYear()} Ken</span>
         <span className="flex items-center gap-5">
+          <a href={site.repo} target="_blank" rel="noreferrer" className="label hover:text-[var(--red)] transition-colors">
+            About this site ↗
+          </a>
           <a href="/.well-known/security.txt" className="label hover:text-[var(--red)] transition-colors">
             security.txt
           </a>

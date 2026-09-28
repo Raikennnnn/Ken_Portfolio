@@ -11,7 +11,7 @@ import { Contact } from "@/components/Contact";
 import { Terminal } from "@/components/Terminal";
 import { SoundEffects } from "@/components/Sound";
 import { Room } from "@/components/Room";
-import { profile, projects } from "@/content/data";
+import { profile, projects, site } from "@/content/data";
 import { getRepos, timeAgo } from "@/lib/github";
 import { getHoneypotSummary } from "@/lib/honeypot";
 
@@ -28,13 +28,14 @@ export default async function Page() {
   const repos = repoList ?? [];
   const live = { honeypot, honeypotUpdated: honeypot ? timeAgo(honeypot.generatedAt) : undefined };
   const projectRepos = new Set(projects.flatMap((p) => (p.repo ? [key(p.repo)] : [])));
+  const siteRepo = key(site.repo); // linked from the footer, not listed again
 
   // Formatted here so server and client render the same text.
   const lastPush: Record<string, string> = {};
   const others: OtherRepo[] = [];
   for (const r of repos) {
     if (projectRepos.has(key(r.url))) lastPush[key(r.url)] = timeAgo(r.pushedAt);
-    else others.push({ name: r.name, description: r.description, language: r.language, url: r.url, ago: timeAgo(r.pushedAt) });
+    else if (key(r.url) !== siteRepo) others.push({ name: r.name, description: r.description, language: r.language, url: r.url, ago: timeAgo(r.pushedAt) });
   }
 
   return (

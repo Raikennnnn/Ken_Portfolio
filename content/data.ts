@@ -235,22 +235,6 @@ export const projects: Project[] = [
   },
   {
     index: "03",
-    title: "Ken Portfolio",
-    year: "2026",
-    role: "Design + Dev",
-    stack: ["TypeScript", "Next.js", "React", "Tailwind CSS", "Secure headers / CSP", "Claude Code"],
-    summary:
-      "This site. It inspects your visit, hides a five-flag capture-the-flag, and has a working terminal (Ctrl+K).",
-    security: [
-      "Content-Security-Policy, HSTS, frame-ancestors 'none', strict referrer and permissions policies",
-      "No third-party scripts; GitHub data is fetched server-side",
-      "Publishes /.well-known/security.txt for responsible disclosure",
-      "CTF answers are checked against SHA-256 hashes in the browser; nothing is sent to a server",
-    ],
-    repo: "https://github.com/Raikennnnn/Ken_Portfolio",
-  },
-  {
-    index: "04",
     title: "Higanbana",
     year: "2026",
     role: "SSH honeypot threat intel",
@@ -268,6 +252,13 @@ export const projects: Project[] = [
     live: "honeypot",
   },
 ];
+
+/** This portfolio. Not listed as a project (you're already on it); the footer links its repo. */
+export const site = {
+  repo: "https://github.com/Raikennnnn/Ken_Portfolio",
+  /** Skill names this site's code is evidence for. */
+  stack: ["TypeScript", "Next.js", "React", "Tailwind CSS", "Secure headers / CSP", "Claude Code"],
+};
 
 // Only real roles. One entry is fine; don't pad it.
 export const experience: Experience[] = [
@@ -394,5 +385,6 @@ export function evidenceFor(skill: string): Evidence[] {
   const certified = certifications
     .filter((c) => c.skills?.includes(skill))
     .map((c) => ({ label: c.name, href: c.verifyUrl, external: true }));
-  return [...built, ...tested, ...certified];
+  const thisSite = site.stack.includes(skill) ? [{ label: "This site", href: site.repo, external: true }] : [];
+  return [...built, ...thisSite, ...tested, ...certified];
 }
