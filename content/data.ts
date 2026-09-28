@@ -240,12 +240,13 @@ export const projects: Project[] = [
     role: "SSH honeypot threat intel",
     stack: ["Python", "PostgreSQL", "Docker", "MITRE ATT&CK", "Threat modeling"],
     summary:
-      "Named after the red spider lily (彼岸花), planted around Japanese rice fields because its poisonous bulbs keep pests away. A pipeline that turns SSH honeypot logs into explainable threat intel: it deduplicates Cowrie events, labels each session with rules mapped to MITRE ATT&CK, and publishes only aggregated numbers. It currently analyses the public CyberLab honeynet dataset (about 50 Cowrie honeypots, IPs pseudonymised by its authors). My own hardened sensor is built and firewall-tested, and goes live when I have cloud access.",
+      "Named after the red spider lily (彼岸花), planted around Japanese rice fields because its poisonous bulbs keep pests away. A pipeline that turns SSH honeypot data into explainable threat intel, in three layers: a live layer that collects global SSH attack data from SANS ISC every day, a deep analysis of the public CyberLab honeynet dataset (Cowrie sessions labelled with rules mapped to MITRE ATT&CK), and my own hardened Cowrie sensor, built and firewall-tested to plug into the same pipeline.",
     security: [
-      "Every log line is treated as hostile: size limits, type checks, parameterised SQL only",
+      "Every log line and feed entry is treated as hostile: size limits, type checks, character allowlists, parameterised SQL",
       "Public output is aggregates only, with no IPs, commands or URLs; a test checks that none leak into the export",
       "A password is shown only if 20+ different sources tried it, so real leaked credentials stay out",
-      "This block is validated server-side before it renders; bad data hides it instead of breaking the page",
+      "The daily job runs on GitHub Actions with pinned actions, no secrets and write access only to its data branch",
+      "Both data blocks are validated server-side before they render; bad data hides them instead of breaking the page",
       "Sensor design: all outbound traffic blocked and SSH forwarding off, so it can't be used against anyone else",
     ],
     repo: "https://github.com/Raikennnnn/Higanbana",

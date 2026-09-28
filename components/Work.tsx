@@ -5,9 +5,16 @@ import { ProjectRow } from "./ProjectRow";
 import { SectionHeader } from "./SectionHeader";
 import { useInView } from "@/lib/useInView";
 import type { HoneypotSummary } from "@/lib/honeypot";
+import type { LiveFeed } from "@/lib/dshield";
 
 /** Live data for projects with `live` set, fetched server-side in app/page.tsx. */
-export type LiveData = { honeypot: HoneypotSummary | null; honeypotUpdated?: string };
+export type LiveData = {
+  honeypot: HoneypotSummary | null;
+  honeypotUpdated?: string;
+  feed: LiveFeed | null;
+  /** True when the feed's data is more than 3 days old (the daily job has stopped). */
+  feedStale: boolean;
+};
 
 /** A public repository that isn't one of the listed projects. */
 export type OtherRepo = {

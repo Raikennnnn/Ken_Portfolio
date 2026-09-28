@@ -14,6 +14,7 @@ import { Room } from "@/components/Room";
 import { profile, projects, site } from "@/content/data";
 import { getRepos, timeAgo } from "@/lib/github";
 import { getHoneypotSummary } from "@/lib/honeypot";
+import { getLiveFeed } from "@/lib/dshield";
 
 // Re-render at most hourly so the GitHub data stays fresh.
 export const revalidate = 3600;
@@ -21,12 +22,15 @@ export const revalidate = 3600;
 const key = (url: string) => url.toLowerCase().replace(/\/$/, "");
 
 export default async function Page() {
-  const [repoList, honeypot] = await Promise.all([
+  const hasHoneypot = projects.some((p) => p.live === "honeypot");
+  const [repoList, honeypot, feed] = await Promise.all([
     getRepos(profile.github),
-    projects.some((p) => p.live === "honeypot") ? getHoneypotSummary() : null,
+    hasHoneypot ? getHoneypotSummary() : null,
+    hasHoneypot ? getLiveFeed() : null,
   ]);
   const repos = repoList ?? [];
-  const live = { honeypot, honeypotUpdated: honeypot ? timeAgo(honeypot.generatedAt) : undefined };
+  const feedStale = feed ? Date.now() - Date.parse(`${feed.date}T00:00:00Z`) > 3 * 86_400_000 : false;
+  const live = { honeypot, honeypotUpdated: honeypot ? timeAgo(honeypot.generatedAt) : undefined, feed, feedStale };
   const projectRepos = new Set(projects.flatMap((p) => (p.repo ? [key(p.repo)] : [])));
   const siteRepo = key(site.repo); // linked from the footer, not listed again
 

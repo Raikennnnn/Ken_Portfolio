@@ -3,6 +3,7 @@
 import type { Project } from "@/content/data";
 import { ListRow, NotesPanel, RepoLinks } from "./ListRow";
 import { HoneypotTelemetry } from "./HoneypotTelemetry";
+import { LiveFeed } from "./LiveFeed";
 import type { LiveData } from "./Work";
 
 export function ProjectRow({
@@ -27,7 +28,10 @@ export function ProjectRow({
         <div>
           <p className="text-[0.97rem] leading-[1.75] text-[var(--fg-muted)]">{project.summary}</p>
           {project.live === "honeypot" && live && (
-            <HoneypotTelemetry summary={live.honeypot} updated={live.honeypotUpdated} />
+            <>
+              {live.feed && <LiveFeed feed={live.feed} stale={live.feedStale} />}
+              <HoneypotTelemetry summary={live.honeypot} updated={live.honeypotUpdated} />
+            </>
           )}
           <div className="flex flex-wrap gap-1.5 mt-5">
             {project.stack.map((t) => (
