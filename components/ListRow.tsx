@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 
 /**
  * Expandable list row used by Selected work and Security testing.
- * The open row gets the red selection bar and a drifting marker (NG4 menu cue).
+ * The open row gets the red selection bar and a drifting marker.
  */
 export function ListRow({
   id,
@@ -47,7 +47,7 @@ export function ListRow({
           ›
         </span>
         <span className="font-mono text-[11px] text-[var(--fg-dim)]">{index}</span>
-        <span className="font-serif text-[1.2rem] md:text-[1.35rem] font-medium tracking-tight truncate">{title}</span>
+        <span className="font-serif text-[1.2rem] md:text-[1.35rem] font-medium tracking-tight min-w-0 break-words sm:truncate">{title}</span>
         <span className="label hidden md:block">{meta}</span>
         <span className="flex items-center gap-4">
           <span className="font-mono text-[11px] text-[var(--fg-dim)]">{year}</span>
@@ -70,27 +70,32 @@ export function ListRow({
   );
 }
 
-/** Sunken side panel with a red label and a kanji tag. */
-export function NotesPanel({
-  label,
-  kanji,
-  meaning,
-  children,
-}: {
-  label: string;
-  kanji: string;
-  meaning: string;
-  children: ReactNode;
-}) {
+/** Sunken side panel with a red label. */
+export function NotesPanel({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="border border-[var(--line)] bg-[var(--bg-sunken)] p-5">
-      <div className="flex items-baseline justify-between mb-4">
-        <span className="label text-[var(--red)]">{label}</span>
-        <span className="kanji text-[12px] text-[var(--fg-dim)]" lang="ja" title={`${kanji} — ${meaning}`}>
-          {kanji}
-        </span>
-      </div>
+      <div className="label text-[var(--red)] mb-4">{label}</div>
       {children}
+    </div>
+  );
+}
+
+/** "Live site" / "Repository" buttons, plus an optional trailing note. */
+export function RepoLinks({ url, repo, note }: { url?: string; repo?: string; note?: string }) {
+  if (!url && !repo && !note) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 mt-6">
+      {url && (
+        <a href={url} target="_blank" rel="noreferrer" className="btn">
+          Live site ↗
+        </a>
+      )}
+      {repo && (
+        <a href={repo} target="_blank" rel="noreferrer" className="btn">
+          Repository ↗
+        </a>
+      )}
+      {note && <span className="label">{note}</span>}
     </div>
   );
 }

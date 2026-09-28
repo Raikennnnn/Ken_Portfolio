@@ -30,6 +30,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        {/* CTF flag 1 of 5 lives in the page source. */}
+        <div
+          hidden
+          dangerouslySetInnerHTML={{
+            __html: "<!-- You read the source. flag{view_source_is_recon} . Four more: see #ctf -->",
+          }}
+        />
         <div className="grid-bg" aria-hidden />
         <div className="relative z-10">{children}</div>
       </body>

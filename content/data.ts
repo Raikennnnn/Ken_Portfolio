@@ -45,21 +45,23 @@ export type Writeup = {
 
 export const profile = {
   name: "Ken",
+  fullName: "Kenneth Raichen B. Torres",
   github: "Raikennnnn",
   title: "BSIT Cybersecurity",
   // Two lines; `headlineAccent` is highlighted inside the second line.
   headline: ["I build systems,", "then I test how they break."],
   headlineAccent: "break.",
+  // The intro is rendered as "I'm <fullName>, " + intro.
   intro:
-    "BSIT Cybersecurity student building full-stack apps and games, then security-testing them with OWASP ZAP, Burp Suite, Postman and Chrome DevTools.",
+    "a BSIT Cybersecurity student. I build web apps and Roblox games, and I test them the way an attacker would.",
   bio: [
-    "I'm a BSIT Cybersecurity student with a deep interest in how things break — and how to make them harder to break.",
-    "I build full-stack applications with security baked in from the start, not bolted on after. My favourite work lives at the intersection of secure development and good user experience.",
-    "Outside of coursework and code, I'm exploring game development and creative coding.",
+    "I'm a BSIT Cybersecurity student who wants to understand the real work behind cybersecurity: how systems get attacked, how they're defended, and what it takes to do that job well.",
+    "I learn best by taking on challenges I'm not ready for yet. I'm willing to take a leap of faith, fail, and try again, because every mistake teaches me something a textbook can't.",
+    "Right now I'm focused on sharpening my skills, one project and one test at a time. Outside of school I make games and small creative-coding experiments.",
   ],
   focus: [
     { label: "Stack", value: "TypeScript · React · PHP · Python" },
-    { label: "Security", value: "Secure development · Web security testing" },
+    { label: "Security", value: "Web security testing · Quality checking" },
     { label: "Interests", value: "Game development · Creative coding" },
   ],
   available: true,
@@ -92,7 +94,7 @@ export const securityChecks = {
   "Brute force": "Repeated login attempts",
   "Session hijacking": "Exposed or stolen session identifiers",
   "Session reuse": "Sessions still valid after logout",
-  "DDoS / request flooding": "High request volume against endpoints",
+  "Request flooding / rate limits": "High request volume against endpoints",
 } as const;
 
 export type SecurityTool = keyof typeof securityTools;
@@ -109,6 +111,8 @@ export type Assessment = {
   summary: string;
   tools: SecurityTool[];
   checks: SecurityCheck[];
+  /** Real results only. The block is hidden while the list is empty. */
+  findings?: { issue: string; fix: string }[];
   url?: string;
   repo?: string;
 };
@@ -119,9 +123,9 @@ export const assessments: Assessment[] = [
     target: "IntelliDocs",
     type: "Web application",
     year: "2026",
-    scope: "Authorized testing of a system our team built. No third-party targets.",
+    scope: "Authorized testing of our team's capstone project. No third-party targets.",
     summary:
-      "Tested the enrollment system's web app and PHP API the way an attacker would look at it: intercepting requests, tampering with input and probing authentication and sessions.",
+      "My main role on the team. I tested the web app and its API the way an attacker would look at it: intercepting requests, tampering with input and probing authentication and sessions. I reported what I found to the developer, who fixed and hardened it.",
     tools: ["OWASP ZAP", "Burp Suite", "Postman", "Chrome DevTools"],
     checks: [
       "SQL injection",
@@ -130,10 +134,20 @@ export const assessments: Assessment[] = [
       "Brute force",
       "Session hijacking",
       "Session reuse",
-      "DDoS / request flooding",
+      "Request flooding / rate limits",
     ],
+    // Add what you found and how it was fixed, e.g.
+    // { issue: "Session stayed valid after logout", fix: "Session is destroyed and regenerated on logout" },
+    findings: [],
     repo: "https://github.com/Raikennnnn/IntelliDocs",
   },
+];
+
+export const skillGroups: { key: Skill["category"]; label: string }[] = [
+  { key: "language", label: "Languages" },
+  { key: "framework", label: "Frameworks & platforms" },
+  { key: "practice", label: "Security practice" },
+  { key: "tool", label: "Testing tools" },
 ];
 
 export const skills: Skill[] = [
@@ -165,21 +179,19 @@ export const projects: Project[] = [
     index: "01",
     title: "IntelliDocs",
     year: "2026",
-    role: "Full Stack",
+    role: "First version · Security & QA",
     stack: [
       "TypeScript", "React", "PHP", "Python", "MySQL",
       "Access control (RBAC)", "Audit logging",
-      "OWASP ZAP", "Burp Suite", "Postman", "Chrome DevTools",
     ],
     summary:
-      "Student enrollment system with AI-assisted document verification. Students upload requirements, an OCR service checks them, and registrars review applications from their own portal.",
+      "Our capstone: a student enrollment system with AI-assisted document verification. Students upload requirements, an OCR service checks them, and registrars review applications from their own portal. I built the first version, then handed development to a teammate and worked as the team's security tester and QA: reporting issues and suggesting what to change or keep.",
     security: [
       "Passwords hashed with bcrypt; every query uses PDO prepared statements",
       "Email OTP verification on registration",
       "Role-based access for students, registrars and admins (strict role enum)",
       "Audit trail: activity log + login-attempt log with IP and user agent",
-      "OCR service bound to localhost — uploads go through the PHP API, never straight to Python",
-      "Security-tested for SQL injection, XSS, session attacks, brute force and request flooding",
+      "OCR service only listens on localhost; uploads go through the PHP API, never straight to Python",
     ],
     repo: "https://github.com/Raikennnnn/IntelliDocs",
   },
@@ -193,7 +205,7 @@ export const projects: Project[] = [
       "Roll stones. Power machines. Build your fortune. A factory-automation game for Roblox, built with a Rojo toolchain and a service-based server architecture.",
     security: [
       "Server-authoritative: the server owns rolls, prices, inventory and currency",
-      "Rolls are triggered by an in-world lever with a server-side cooldown — no client roll button to spam",
+      "Rolls come from an in-world lever with a server-side cooldown, so there is no client button to spam",
       "Tested against rapid and invalid requests from the client",
     ],
     repo: "https://github.com/Raikennnnn/stonebound-factory",
@@ -205,11 +217,12 @@ export const projects: Project[] = [
     role: "Design + Dev",
     stack: ["TypeScript", "Next.js", "React", "Tailwind CSS", "Secure headers / CSP"],
     summary:
-      "This site. A quiet, device-style interface in dark and light, with a working terminal (Ctrl+K) and live data from GitHub.",
+      "This site. It inspects your visit, hides a five-flag capture-the-flag, and has a working terminal (Ctrl+K).",
     security: [
       "Content-Security-Policy, HSTS, frame-ancestors 'none', strict referrer and permissions policies",
       "No third-party scripts; GitHub data is fetched server-side",
       "Publishes /.well-known/security.txt for responsible disclosure",
+      "CTF answers are checked against SHA-256 hashes in the browser; nothing is sent to a server",
     ],
     repo: "https://github.com/Raikennnnn/Ken_Portfolio",
   },
@@ -222,12 +235,26 @@ export const certifications: Certification[] = [];
 export const writeups: Writeup[] = [];
 
 export const meta = {
-  siteTitle: "Ken — Cybersecurity Portfolio",
+  siteTitle: "Kenneth Raichen B. Torres — Cybersecurity Portfolio",
   siteDescription:
-    "BSIT Cybersecurity student. I build full-stack apps and games, then test how they break.",
+    "Kenneth Raichen B. Torres (Ken), BSIT Cybersecurity student. I build web apps and games, and test how they break.",
 };
 
 /** Projects that list a given skill in their stack. */
 export function projectsUsing(skill: string): Project[] {
   return projects.filter((p) => p.stack.includes(skill));
+}
+
+export type Evidence = { label: string; href: string; external: boolean };
+
+/** Where a skill is used: projects that build with it, assessments that tested with it. */
+export function evidenceFor(skill: string): Evidence[] {
+  const built = projectsUsing(skill).map((p) => {
+    const href = p.repo ?? p.url;
+    return { label: p.title, href: href ?? "#work", external: Boolean(href) };
+  });
+  const tested = assessments
+    .filter((a) => (a.tools as string[]).includes(skill))
+    .map((a) => ({ label: `${a.target} assessment`, href: "#security", external: false }));
+  return [...built, ...tested];
 }

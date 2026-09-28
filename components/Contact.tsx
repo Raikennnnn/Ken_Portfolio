@@ -14,12 +14,12 @@ export function Contact() {
 
   return (
     <section id="contact" ref={ref} className="pt-20 md:pt-28 scroll-mt-16">
-      <SectionHeader index="06" title="Contact" kanji="連絡" meaning="contact" />
+      <SectionHeader index="06" title="Contact" />
 
       <div className={`reveal ${inView ? "in" : ""} grid md:grid-cols-[1.2fr_1fr] gap-10 md:gap-14`}>
         <div>
           <h3 className="font-serif font-medium text-[clamp(1.7rem,3.4vw,2.5rem)] leading-[1.15] tracking-tight [text-wrap:balance]">
-            Questions, projects or opportunities, my inbox is open.
+            Questions, projects or opportunities: my inbox is open.
           </h3>
           <div className="mt-8 flex flex-wrap gap-3">
             {email && (

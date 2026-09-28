@@ -1,0 +1,6 @@
+# Robots read this file. So does anyone doing recon.
+# Disallow is a polite request, not a lock:
+# flag{robots_txt_is_not_access_control}
+
+User-agent: *
+Allow: /

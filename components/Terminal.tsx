@@ -2,21 +2,24 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  profile, projects, skills, links, certifications, writeups, assessments, securityChecks, securityTools, projectsUsing,
+  profile, projects, skills, links, certifications, writeups, assessments, securityChecks, securityTools, skillGroups, evidenceFor,
 } from "@/content/data";
 import { onToggleTerminal } from "@/lib/terminalBus";
 import { getTheme, setTheme } from "@/lib/theme";
+import { FLAGS, NOTES_FILE, getSolved, submitFlag } from "@/lib/ctf";
 
 type Line = { id: number; node: ReactNode };
 
-const SECTIONS = ["top", "work", "security", "skills", "activity", "about", "contact"];
-const CLOSE_MS = 220; // closing is shorter than opening, as in the NG4 menus
+const SECTIONS = ["top", "work", "security", "ctf", "skills", "about", "contact"];
+const CLOSE_MS = 220; // closing is quicker than opening
 
 const HELP: [string, string][] = [
   ["whoami", "who is this"],
   ["projects", "list projects"],
   ["open <n>", "details and security notes for project n"],
   ["security [n]", "systems I've security-tested / details for n"],
+  ["ctf", "five flags hidden in this site"],
+  ["submit <flag>", "check a flag"],
   ["skills", "skills and where they are used"],
   ["contact", "ways to reach me"],
   ["github | linkedin | email", "open a link"],
@@ -27,8 +30,8 @@ const HELP: [string, string][] = [
 ];
 
 const COMMANDS = [
-  "help", "whoami", "ls", "cat", "projects", "open", "security", "skills", "contact", "github",
-  "linkedin", "email", "goto", "theme", "clear", "exit", "history", "date", "echo", "sudo",
+  "help", "whoami", "ls", "cat", "projects", "open", "security", "ctf", "submit", "skills", "contact", "github",
+  "linkedin", "email", "goto", "theme", "clear", "exit", "history", "date", "echo",
 ];
 
 const FILES = ["about.txt", "security.txt", "projects/", "skills.json"];
@@ -171,11 +174,15 @@ export function Terminal() {
         break;
 
       case "whoami":
-        print(<span>{profile.name} — {profile.title} student.</span>, <Muted>{profile.intro}</Muted>);
+        print(
+          <span>{profile.fullName} ({profile.name})</span>,
+          <Muted>I&apos;m {profile.intro}</Muted>
+        );
         break;
 
       case "ls":
-        print(<span>{FILES.join("   ")}</span>);
+        // `ls -a` shows the dotfile (CTF flag 4)
+        print(<span>{(/(^|\s)-\w*a/.test(arg) ? [".notes", ...FILES] : FILES).join("   ")}</span>);
         break;
 
       case "cat":
@@ -186,7 +193,43 @@ export function Terminal() {
             <Dim>Machine-readable copy: /.well-known/security.txt</Dim>
           );
         else if (arg === "skills.json") run("skills");
+        else if (arg === ".notes") print(<span>{NOTES_FILE}</span>);
         else print(<Dim>cat: {arg || "missing operand"}: no such file</Dim>);
+        break;
+
+      case "ctf": {
+        const solved = getSolved();
+        print(
+          <span>
+            break this site <Dim>· {solved.length}/{FLAGS.length} found · progress stays in your browser</Dim>
+          </span>,
+          ...FLAGS.map((f, i) => (
+            <Row
+              left={
+                <span>
+                  {solved.includes(f.id) ? <Red>[x]</Red> : <Dim>[ ]</Dim>} {i + 1}. {f.title} <Dim>({f.level})</Dim>
+                </span>
+              }
+              right={f.hint}
+            />
+          )),
+          <Dim>submit flag{"{...}"} to check one</Dim>
+        );
+        break;
+      }
+
+      case "submit":
+      case "flag":
+        if (!arg) {
+          print(<Dim>usage: submit flag{"{...}"}</Dim>);
+          break;
+        }
+        submitFlag(arg).then((r) => {
+          if (r.status === "new") print(<Red>correct: {r.flag.title.toLowerCase()} · {r.solved}/{FLAGS.length}</Red>);
+          else if (r.status === "repeat") print(<Dim>already found: {r.flag.title.toLowerCase()}</Dim>);
+          else if (r.status === "unsupported") print(<Dim>can&apos;t check flags over plain HTTP</Dim>);
+          else print(<Dim>not a flag</Dim>);
+        });
         break;
 
       case "projects":
@@ -247,22 +290,18 @@ export function Terminal() {
           <Red>checks</Red>,
           ...a.checks.map((c) => <Row left={`  ${c}`} right={securityChecks[c]} />)
         );
+        if (a.findings?.length)
+          print(<Red>findings</Red>, ...a.findings.map((f) => <Row left={`  ${f.issue}`} right={`fixed: ${f.fix}`} />));
         break;
       }
 
       case "skills": {
-        const groups = [
-          ["language", "languages"],
-          ["framework", "frameworks & platforms"],
-          ["practice", "security practice"],
-          ["tool", "testing tools"],
-        ] as const;
-        for (const [key, label] of groups) {
-          print(<Red>{label}</Red>);
+        for (const { key, label } of skillGroups) {
+          print(<Red>{label.toLowerCase()}</Red>);
           print(
             ...skills
               .filter((s) => s.category === key)
-              .map((s) => <Row left={`  ${s.name}`} right={projectsUsing(s.name).map((p) => p.title).join(", ")} />)
+              .map((s) => <Row left={`  ${s.name}`} right={evidenceFor(s.name).map((e) => e.label).join(", ")} />)
           );
         }
         if (certifications.length) print(<Dim>{certifications.length} certification(s) — goto about</Dim>);
@@ -306,10 +345,6 @@ export function Terminal() {
 
       case "echo":
         print(arg || " ");
-        break;
-
-      case "sudo":
-        print(<Red>guest is not in the sudoers file. This incident will be reported.</Red>);
         break;
 
       case "clear":
@@ -405,9 +440,7 @@ export function Terminal() {
         onClick={() => inputRef.current?.focus({ preventScroll: true })}
       >
         <div className="flex items-center gap-3 px-4 h-10 border-b border-[var(--line)] shrink-0">
-          <span className="kanji text-[13px] text-[var(--red)] tracking-normal" lang="ja" title="端末 — terminal">
-            端末
-          </span>
+          <span className="font-mono text-[12px] text-[var(--red)]">&gt;_</span>
           <span className="label">Terminal</span>
           <button
             type="button"

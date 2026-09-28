@@ -9,11 +9,6 @@ export type RepoActivity = {
   pushedAt: string;
 };
 
-export type GithubSnapshot = {
-  publicRepos: number;
-  repos: RepoActivity[];
-};
-
 const API = "https://api.github.com";
 
 async function getJson<T>(path: string): Promise<T | null> {
@@ -29,7 +24,8 @@ async function getJson<T>(path: string): Promise<T | null> {
   }
 }
 
-export async function getGithubSnapshot(user: string): Promise<GithubSnapshot | null> {
+/** Public, non-fork repositories, most recently pushed first. Null if GitHub is unreachable. */
+export async function getRepos(user: string): Promise<RepoActivity[] | null> {
   type ApiRepo = {
     name: string;
     description: string | null;
@@ -39,24 +35,18 @@ export async function getGithubSnapshot(user: string): Promise<GithubSnapshot | 
     fork: boolean;
   };
 
-  const [profile, repos] = await Promise.all([
-    getJson<{ public_repos: number }>(`/users/${user}`),
-    getJson<ApiRepo[]>(`/users/${user}/repos?per_page=100&sort=pushed`),
-  ]);
-  if (!profile || !repos) return null;
+  const repos = await getJson<ApiRepo[]>(`/users/${user}/repos?per_page=100&sort=pushed`);
+  if (!repos) return null;
 
-  return {
-    publicRepos: profile.public_repos,
-    repos: repos
-      .filter((r) => !r.fork)
-      .map((r) => ({
-        name: r.name,
-        description: r.description,
-        language: r.language,
-        url: r.html_url,
-        pushedAt: r.pushed_at,
-      })),
-  };
+  return repos
+    .filter((r) => !r.fork)
+    .map((r) => ({
+      name: r.name,
+      description: r.description,
+      language: r.language,
+      url: r.html_url,
+      pushedAt: r.pushed_at,
+    }));
 }
 
 export function timeAgo(iso: string, now = Date.now()): string {

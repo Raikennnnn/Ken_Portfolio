@@ -196,7 +196,7 @@ body {
   }
 }
 
-/* Highlighted items drift gently back and forth (NG4 menu cue) */
+/* The open list item's marker drifts gently back and forth */
 @keyframes nudge {
   0%, 100% { transform: translateX(0); }
   50% { transform: translateX(3px); }
@@ -216,26 +216,7 @@ body {
   transform: none;
 }
 
-/* Digital rain: two layers of red dots drifting down at different speeds */
-.rain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(var(--red) 0.8px, transparent 1.2px),
-    radial-gradient(var(--red) 0.8px, transparent 1.2px);
-  background-size: 18px 26px, 30px 44px;
-  background-position: 0 0, 9px 13px;
-  opacity: 0.22;
-  animation: rain 9s linear infinite;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 25%, #000 70%, transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 25%, #000 70%, transparent);
-}
-@keyframes rain {
-  to { background-position: 0 260px, 9px 453px; }
-}
-
-/* ── Terminal open / close (NG4 menu transition, scaled down) ── */
+/* ── Terminal open / close ── */
 .term-backdrop {
   animation: fadeIn 0.2s ease-out both;
 }
@@ -310,6 +291,13 @@ body {
   border: 1px solid var(--line);
   cursor: pointer;
 }
+/* Copy for mouse vs. touch devices */
+.touch-only { display: none; }
+@media (hover: none) {
+  .hover-only { display: none; }
+  .touch-only { display: inline; }
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { onThemeChange } from "@/lib/theme";
+import { profile } from "@/content/data";
 
 const SRC = "/profile-photo.jpg";
 const W = 132; // dither resolution (3:4)
 const H = 176;
 const SCALE = 2; // canvas is drawn at 2× the dither grid
-const IN_MS = 620; // reveal (slower in…
-const OUT_MS = 300; // …faster out, like the NG4 menus)
+const IN_MS = 620; // reveal is slower in…
+const OUT_MS = 300; // …than out
 
 // 4×4 Bayer matrix, normalised to 0..1
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
@@ -206,7 +207,7 @@ export function PhotoFrame() {
         className="photo-inner corners block"
         onClick={() => setReveal(!revealed)}
         aria-pressed={revealed}
-        aria-label={revealed ? "Show dithered portrait" : "Show photo of Ken"}
+        aria-label={revealed ? "Show dithered portrait" : `Show photo of ${profile.fullName}`}
       >
         {status === "missing" ? (
           <span className="absolute inset-0 grid place-items-center label">Add profile-photo.jpg to /public</span>
@@ -224,7 +225,7 @@ export function PhotoFrame() {
             <img
               ref={photoRef}
               src={SRC}
-              alt="Ken"
+              alt={profile.fullName}
               className="absolute inset-0 w-full h-full object-cover object-[50%_30%] transition-opacity duration-150"
               style={{ opacity: 0 }}
             />
@@ -233,7 +234,16 @@ export function PhotoFrame() {
       </button>
       <figcaption className="mt-2.5 flex items-baseline justify-between">
         <span className="label">Portrait</span>
-        <span className="label">{revealed ? "Ken" : "Hover to reveal"}</span>
+        <span className="label">
+          {revealed ? (
+            profile.name
+          ) : (
+            <>
+              <span className="hover-only">Hover to reveal</span>
+              <span className="touch-only">Tap to reveal</span>
+            </>
+          )}
+        </span>
       </figcaption>
     </figure>
   );

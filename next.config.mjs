@@ -28,6 +28,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // CTF flag 3 of 5 (see lib/ctf.ts). Harmless by design.
+  { key: "X-Ken-Flag", value: "flag{headers_tell_stories}" },
 ];
 
 const nextConfig = {

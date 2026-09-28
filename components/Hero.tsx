@@ -1,28 +1,10 @@
 "use client";
 
-import { profile, projects, skills, projectsUsing } from "@/content/data";
+import { profile } from "@/content/data";
 import { toggleTerminal } from "@/lib/terminalBus";
-import { HeroMark } from "./HeroMark";
+import { VisitInspector } from "./VisitInspector";
 
-export function Hero({
-  lastPush,
-  publicRepos,
-}: {
-  lastPush: string | null;
-  publicRepos: number | null;
-}) {
-  const languagesUsed = skills.filter(
-    (s) => s.category === "language" && projectsUsing(s.name).length > 0
-  ).length;
-
-  const stats = [
-    { value: String(projects.length).padStart(2, "0"), label: "Projects" },
-    { value: String(languagesUsed).padStart(2, "0"), label: "Languages used" },
-    lastPush
-      ? { value: lastPush, label: "Last push" }
-      : { value: String(publicRepos ?? projects.length).padStart(2, "0"), label: "Public repos" },
-  ];
-
+export function Hero() {
   const [line1, line2] = profile.headline;
   const accentAt = line2.lastIndexOf(profile.headlineAccent);
 
@@ -56,7 +38,7 @@ export function Hero({
         </h1>
 
         <p className="mt-7 max-w-[540px] text-[1.05rem] leading-[1.75] text-[var(--fg-muted)]">
-          {profile.intro}
+          I&apos;m <span className="text-[var(--fg)]">{profile.fullName}</span>, {profile.intro}
         </p>
 
         <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -68,18 +50,9 @@ export function Hero({
             <kbd className="kbd hidden sm:inline-flex">Ctrl K</kbd>
           </button>
         </div>
-
-        <dl className="mt-12 grid grid-cols-3 max-w-[540px] border-t border-[var(--line)]">
-          {stats.map((s, i) => (
-            <div key={s.label} className={`pt-4 ${i > 0 ? "pl-4 border-l border-[var(--line)]" : ""}`}>
-              <dd className="font-serif text-2xl font-medium">{s.value}</dd>
-              <dt className="label mt-1.5">{s.label}</dt>
-            </div>
-          ))}
-        </dl>
       </div>
 
-      <HeroMark />
+      <VisitInspector />
     </section>
   );
 }

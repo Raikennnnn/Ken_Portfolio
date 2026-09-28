@@ -10,7 +10,7 @@ export function About() {
 
   return (
     <section id="about" ref={ref} className="py-20 md:py-28 scroll-mt-16">
-      <SectionHeader index="05" title="About" kanji="人物" meaning="profile" />
+      <SectionHeader index="05" title="About" />
 
       <div className={`reveal ${inView ? "in" : ""} grid md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr_240px] gap-10 lg:gap-12`}>
         <PhotoFrame />
@@ -28,14 +28,6 @@ export function About() {
               <dd className="mt-1.5 text-[0.93rem]">{item.value}</dd>
             </div>
           ))}
-          {profile.available && (
-            <div className="py-4 border-b border-[var(--line)]">
-              <dt className="label">Status</dt>
-              <dd className="mt-1.5 text-[0.93rem] flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-[var(--red)]" aria-hidden /> Open to work
-              </dd>
-            </div>
-          )}
         </dl>
       </div>
 

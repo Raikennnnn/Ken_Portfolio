@@ -1,9 +1,18 @@
 "use client";
 
 import type { Project } from "@/content/data";
-import { ListRow, NotesPanel } from "./ListRow";
+import { ListRow, NotesPanel, RepoLinks } from "./ListRow";
 
-export function ProjectRow({ project, defaultOpen = false }: { project: Project; defaultOpen?: boolean }) {
+export function ProjectRow({
+  project,
+  lastPush,
+  defaultOpen = false,
+}: {
+  project: Project;
+  /** e.g. "2w ago", from GitHub */
+  lastPush?: string;
+  defaultOpen?: boolean;
+}) {
   return (
     <ListRow
       id={`project-${project.index}`}
@@ -23,21 +32,10 @@ export function ProjectRow({ project, defaultOpen = false }: { project: Project;
               </span>
             ))}
           </div>
-          <div className="flex gap-2 mt-6">
-            {project.url && (
-              <a href={project.url} target="_blank" rel="noreferrer" className="btn">
-                Live site ↗
-              </a>
-            )}
-            {project.repo && (
-              <a href={project.repo} target="_blank" rel="noreferrer" className="btn">
-                Repository ↗
-              </a>
-            )}
-          </div>
+          <RepoLinks url={project.url} repo={project.repo} note={lastPush && `Last push ${lastPush}`} />
         </div>
 
-        <NotesPanel label="Security notes" kanji="安全" meaning="safety, security">
+        <NotesPanel label="Security notes">
           <ul className="flex flex-col gap-2.5">
             {project.security.map((s) => (
               <li key={s} className="flex gap-3 text-[0.9rem] leading-[1.6] text-[var(--fg-muted)]">
