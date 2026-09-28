@@ -23,16 +23,22 @@ const I = {
 export type MenuSection = { id: string; label: string };
 type MenuNode = { key: string; label: string; icon: ReactNode; href?: string; action?: () => void; current?: boolean };
 
-const STEP_Y = 46; // vertical distance between nodes
+const STEP_Y = 46; // vertical distance between nodes (tightens on short screens)
 const ZIG = 40; // horizontal zigzag offset
 const ROOT = { x: 18, y: 18 }; // centre of the burger button
+const LABEL_X = ROOT.x + ZIG + 30; // touch screens: every label lines up in one column here
 const CLOSE_MS = 260;
 
-/** Desktop section menu: the burger turns into a diamond and a chain of diamond icons unfolds. */
+/**
+ * Section menu for every screen size: the burger turns into a diamond and a chain of diamond
+ * icons unfolds. Mouse: names appear on hover. Touch: names are always shown, in one column,
+ * and tapping a name works like tapping its diamond.
+ */
 export function DiamondMenu({ sections, active }: { sections: MenuSection[]; active: string | null }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [stepY, setStepY] = useState(STEP_Y);
   const wrapRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
@@ -53,7 +59,7 @@ export function DiamondMenu({ sections, active }: { sections: MenuSection[]; act
     { key: "room", label: "Server room", icon: I.room, action: () => openRoom() },
     { key: "terminal", label: "Terminal", icon: I.terminal, action: () => toggleTerminal(true) },
   ];
-  const pos = nodes.map((_, i) => ({ x: ROOT.x + (i % 2 ? ZIG : 0), y: ROOT.y + 58 + i * STEP_Y }));
+  const pos = nodes.map((_, i) => ({ x: ROOT.x + (i % 2 ? ZIG : 0), y: ROOT.y + 58 + i * stepY }));
   const points = [ROOT, ...pos].map((p) => `${p.x},${p.y}`).join(" ");
   const length = [ROOT, ...pos].slice(1).reduce((sum, p, i, arr) => {
     const prev = i === 0 ? ROOT : arr[i - 1];
@@ -63,12 +69,16 @@ export function DiamondMenu({ sections, active }: { sections: MenuSection[]; act
   // mount on open, play the fold-away before unmounting
   useEffect(() => {
     if (open) {
+      // fit all nodes on short screens (the header sits ~14px down; keep a bottom margin)
+      setStepY(Math.max(34, Math.min(STEP_Y, (innerHeight - 14 - ROOT.y - 58 - 36) / (nodes.length - 1))));
       setClosing(false);
       setMounted(true);
+      document.body.style.overflow = "hidden"; // no scrolling the page behind the menu
       return;
     }
     if (!mounted) return;
     setClosing(true);
+    document.body.style.overflow = "";
     const t = window.setTimeout(() => {
       setMounted(false);
       setClosing(false);
@@ -133,7 +143,7 @@ export function DiamondMenu({ sections, active }: { sections: MenuSection[]; act
 
       {mounted && (
         <nav id="section-menu" aria-label="Sections" className="absolute left-0 top-0 z-[70]">
-          <svg className="dm-lines" width={ROOT.x + ZIG + 40} height={pos[pos.length - 1].y + 30} aria-hidden>
+          <svg className="dm-lines" width={LABEL_X} height={pos[pos.length - 1].y + 30} aria-hidden>
             <polyline
               className="dm-line"
               points={points}
@@ -156,12 +166,36 @@ export function DiamondMenu({ sections, active }: { sections: MenuSection[]; act
                 "aria-label": n.label,
                 "aria-current": n.current ? ("true" as const) : undefined,
                 onClick: () => {
-                  n.action?.();
                   close();
+                  // open the terminal / room once the menu has folded (and released the scroll lock)
+                  if (n.action) window.setTimeout(n.action, CLOSE_MS);
                 },
               };
+              // The name tag. It repeats the diamond's link for touch screens (where it's always
+              // shown and easier to hit), so it's hidden from screen readers and the tab order.
+              const tag = {
+                className: `dm-label ${n.current ? "dm-label-current" : ""}`,
+                tabIndex: -1,
+                "aria-hidden": true,
+                onClick: common.onClick,
+              };
+              const tagText = (
+                <>
+                  <span className="text-[var(--red)]">{n.href ? pad2(i + 1) : "··"}</span> {n.label}
+                </>
+              );
               return (
-                <li key={n.key} className="dm-node" style={{ left: pos[i].x, top: pos[i].y, ["--i" as string]: i, ["--n" as string]: nodes.length }}>
+                <li
+                  key={n.key}
+                  className="dm-node"
+                  style={{
+                    left: pos[i].x,
+                    top: pos[i].y,
+                    ["--i" as string]: i,
+                    ["--n" as string]: nodes.length,
+                    ["--align" as string]: `${LABEL_X - pos[i].x}px`,
+                  }}
+                >
                   {n.href ? (
                     <a href={n.href} {...common}>
                       {inner}
@@ -171,9 +205,15 @@ export function DiamondMenu({ sections, active }: { sections: MenuSection[]; act
                       {inner}
                     </button>
                   )}
-                  <span className="dm-label" aria-hidden>
-                    <span className="text-[var(--red)]">{n.href ? pad2(i + 1) : "··"}</span> {n.label}
-                  </span>
+                  {n.href ? (
+                    <a href={n.href} {...tag}>
+                      {tagText}
+                    </a>
+                  ) : (
+                    <button type="button" {...tag}>
+                      {tagText}
+                    </button>
+                  )}
                 </li>
               );
             })}
