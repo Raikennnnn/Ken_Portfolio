@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getTheme, onThemeChange, setTheme, type Theme } from "@/lib/theme";
+import { initThemeScan } from "@/lib/themeTransition";
 
 export function ThemeToggle() {
   const [theme, setLocal] = useState<Theme>("dark");
@@ -10,6 +11,9 @@ export function ThemeToggle() {
     setLocal(getTheme());
     return onThemeChange(setLocal);
   }, []);
+
+  // Get the "screen breaks" frames ready in idle time, so the switch starts instantly.
+  useEffect(() => initThemeScan(), []);
 
   const next: Theme = theme === "dark" ? "light" : "dark";
 

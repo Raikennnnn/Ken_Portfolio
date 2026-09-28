@@ -10,13 +10,13 @@ export function Skills() {
 
   return (
     <section id="skills" ref={ref} className="py-20 md:py-28 scroll-mt-16">
-      <SectionHeader index="04" title="Skills" />
+      <SectionHeader index="06" title="Skills" />
 
       <p className="-mt-4 mb-12 max-w-[560px] text-[0.97rem] leading-[1.75] text-[var(--fg-muted)]">
         Each skill links to the work that uses it.
       </p>
 
-      <div className={`reveal ${inView ? "in" : ""} grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12`}>
+      <div className={`reveal ${inView ? "in" : ""} grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12`}>
         {skillGroups.map((group) => {
           const items = skills.filter((s) => s.category === group.key);
           return (

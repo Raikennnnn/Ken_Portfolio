@@ -5,9 +5,12 @@ import { Security } from "@/components/Security";
 import { Ctf } from "@/components/Ctf";
 import { Skills } from "@/components/Skills";
 import { About } from "@/components/About";
+import { Experience } from "@/components/Experience";
+import { Credentials } from "@/components/Credentials";
 import { Contact } from "@/components/Contact";
 import { Terminal } from "@/components/Terminal";
 import { SoundEffects } from "@/components/Sound";
+import { Room } from "@/components/Room";
 import { profile, projects } from "@/content/data";
 import { getRepos, timeAgo } from "@/lib/github";
 
@@ -33,14 +36,17 @@ export default async function Page() {
       <Header />
       <main className="mx-auto max-w-[1120px] px-5 md:px-8">
         <Hero />
+        <About />
+        <Experience />
         <Work lastPush={lastPush} others={others} />
         <Security />
-        <Ctf />
+        <Credentials />
         <Skills />
-        <About />
+        <Ctf />
         <Contact />
       </main>
       <Terminal />
+      <Room />
       <SoundEffects />
     </>
   );

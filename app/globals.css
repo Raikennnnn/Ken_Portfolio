@@ -291,7 +291,9 @@ body {
   border: 1px solid var(--line);
   cursor: pointer;
 }
-/* ── Theme switch: the new theme scans in from the top behind a red line ── */
+/* ── Theme switch, staged like a game menu opening: a red line draws out from the centre,
+   splits in two and the new theme opens between the lines with dithered edges.
+   The motion itself is driven from lib/themeTransition.ts. ── */
 .theme-scan {
   display: none;
   position: fixed;
@@ -303,8 +305,9 @@ body {
   pointer-events: none;
   background: var(--red);
   box-shadow: 0 0 10px 1px var(--red);
-  view-transition-name: theme-scan;
 }
+.theme-scan-a { view-transition-name: theme-scan-a; }
+.theme-scan-b { view-transition-name: theme-scan-b; }
 html.theme-switching .theme-scan { display: block; }
 /* colours jump inside the snapshot instead of fading underneath it */
 html.theme-switching, html.theme-switching * { transition: none !important; }
@@ -314,22 +317,166 @@ html.theme-switching, html.theme-switching * { transition: none !important; }
   animation: none;
   mix-blend-mode: normal;
 }
-::view-transition-new(root) {
-  animation: theme-reveal 0.7s var(--ease-out) both;
+/* hidden until the scan animation takes over (no one-frame flash of the new theme) */
+::view-transition-new(root) { clip-path: inset(0 0 100% 0); }
+::view-transition-group(theme-scan-a),
+::view-transition-group(theme-scan-b),
+::view-transition-new(theme-scan-a),
+::view-transition-new(theme-scan-b) { animation: none; }
+::view-transition-old(theme-scan-a),
+::view-transition-old(theme-scan-b) { display: none; }
+
+/* ── Diamond menu (DiamondMenu.tsx): the burger becomes a diamond and a chain of diamond
+   icons unfolds, joined by a neon red line. ── */
+.dm-root {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--fg);
 }
-::view-transition-group(theme-scan) {
-  animation: theme-scan-move 0.7s var(--ease-out) both;
+.dm-root-frame {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line-strong);
+  transition: transform 0.45s var(--ease-out), border-color 0.2s ease, box-shadow 0.3s ease, inset 0.45s var(--ease-out);
 }
-::view-transition-old(theme-scan) { display: none; }
-::view-transition-new(theme-scan) { animation: none; }
-@keyframes theme-reveal {
-  from { clip-path: inset(0 0 100% 0); }
-  to { clip-path: inset(0 0 0 0); }
+.dm-root:hover .dm-root-frame { border-color: var(--red-line); }
+.dm-root-open { color: var(--red); }
+.dm-root-open .dm-root-frame {
+  inset: 5px;
+  transform: rotate(45deg);
+  border-color: var(--red);
+  box-shadow: 0 0 12px var(--red-soft), inset 0 0 8px var(--red-soft);
 }
-@keyframes theme-scan-move {
-  from { transform: translateY(0); opacity: 1; }
-  85% { opacity: 1; }
-  to { transform: translateY(100vh); opacity: 0; }
+
+.dm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49; /* under the header (50), where the menu lives */
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.25s ease-out both;
+}
+.dm-backdrop-out { animation: fadeOut 0.22s ease-in both; }
+.dm-lines { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.dm-line {
+  stroke: var(--red);
+  stroke-width: 1.25;
+  filter: drop-shadow(0 0 3px var(--red)) drop-shadow(0 0 8px var(--red-line));
+  animation: dm-draw 0.7s var(--ease-out) 0.08s both, dm-pulse 2.6s ease-in-out 0.9s infinite;
+}
+.dm-closing .dm-line { animation: dm-undraw 0.22s ease-in both; }
+@keyframes dm-draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+@keyframes dm-undraw { from { stroke-dashoffset: 0; } to { stroke-dashoffset: var(--len); } }
+@keyframes dm-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+.dm-node { position: absolute; width: 0; height: 0; list-style: none; }
+.dm-item {
+  position: absolute;
+  left: -13px;
+  top: -13px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--red-line);
+  transform: rotate(45deg);
+  animation: dm-in 0.5s var(--ease-out) both;
+  animation-delay: calc(var(--i) * 45ms + 90ms);
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+}
+.dm-item > svg { transform: rotate(-45deg); }
+.dm-item:hover,
+.dm-item:focus-visible {
+  color: var(--red);
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, var(--bg-panel));
+  box-shadow: 0 0 14px var(--red-line);
+  outline: none;
+}
+.dm-current { color: var(--on-red); background: var(--red); border-color: var(--red); box-shadow: 0 0 12px var(--red-line); }
+.dm-current:hover, .dm-current:focus-visible { color: var(--on-red); background: var(--red); }
+.dm-closing .dm-item {
+  animation: dm-out 0.22s ease-in both;
+  animation-delay: calc((var(--n) - var(--i)) * 12ms);
+}
+@keyframes dm-in {
+  from { transform: rotate(-135deg) scale(0.2); opacity: 0; }
+  60% { opacity: 1; }
+  to { transform: rotate(45deg) scale(1); opacity: 1; }
+}
+@keyframes dm-out { to { transform: rotate(225deg) scale(0.2); opacity: 0; } }
+
+.dm-label {
+  position: absolute;
+  left: 24px;
+  top: 0;
+  transform: translate(-6px, -50%);
+  white-space: nowrap;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  border: 1px solid var(--red-line);
+  box-shadow: 0 0 10px var(--red-soft);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.2s var(--ease-out);
+}
+.dm-item:hover + .dm-label,
+.dm-item:focus-visible + .dm-label { opacity: 1; transform: translate(0, -50%); }
+/* no hover on touch screens: show the names */
+@media (hover: none) { .dm-label { opacity: 1; transform: translate(0, -50%); } }
+
+/* ── Server room device screens (RoomScreens.tsx): CRT-style, powering on over the room ── */
+.room-screen {
+  position: absolute;
+  inset: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-sunken);
+  border: 1px solid var(--red-line);
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.35), 0 0 24px var(--red-soft);
+  animation: crt-on 0.42s var(--ease-out) both;
+}
+@keyframes crt-on {
+  0% { transform: scale(0.6, 0.004); filter: brightness(4); opacity: 0.6; }
+  35% { transform: scale(1, 0.004); filter: brightness(3); opacity: 1; }
+  70% { transform: scale(1, 1.03); filter: brightness(1.4); }
+  100% { transform: none; filter: none; }
+}
+.room-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, 0.1) 2px 3px);
+}
+.room-dialogue {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  border: 1px solid var(--red-line);
+  box-shadow: 0 0 24px var(--red-soft);
+  animation: dialogue-in 0.28s var(--ease-out) both;
+}
+@keyframes dialogue-in { from { transform: translateY(12px); opacity: 0; } }
+/* small screens: device screens take the whole viewport so they stay usable */
+@media (max-width: 640px) {
+  .room-screen { position: fixed; inset: 10px; z-index: 70; }
+  .room-dialogue { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 70; }
 }
 
 /* Copy for mouse vs. touch devices */

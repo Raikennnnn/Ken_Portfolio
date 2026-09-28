@@ -19,7 +19,7 @@ export function Work({ lastPush, others }: { lastPush: Record<string, string>; o
 
   return (
     <section id="work" ref={ref} className="py-20 md:py-28 scroll-mt-16">
-      <SectionHeader index="01" title="Selected work" />
+      <SectionHeader index="03" title="Selected work" />
 
       <div className={`reveal ${inView ? "in" : ""} border-t border-[var(--line)]`}>
         {projects.map((p) => (

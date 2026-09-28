@@ -1,5 +1,7 @@
 // Dark is the site's default ("true") colour; light is opt-in and remembered.
 
+import { playThemeScan } from "./themeTransition";
+
 export type Theme = "dark" | "light";
 
 export const THEME_KEY = "ken-theme";
@@ -22,13 +24,13 @@ function applyTheme(theme: Theme) {
 }
 
 /**
- * Switch theme with a top-to-bottom "scan": the new theme is revealed behind a red
- * line (see .theme-scan in globals.css). Falls back to an instant switch where View
+ * Switch theme with a "menu opening" sequence from the centre of the screen
+ * (lib/themeTransition.ts, red lines are .theme-scan in globals.css). Falls back to an instant switch where View
  * Transitions aren't supported or motion is reduced.
  */
 // View Transitions aren't in this TypeScript version's DOM types yet.
 type ViewTransitionDocument = Document & {
-  startViewTransition?: (update: () => void) => { finished: Promise<void> };
+  startViewTransition?: (update: () => void) => { ready: Promise<void>; finished: Promise<void> };
 };
 
 export function setTheme(theme: Theme) {
@@ -40,9 +42,13 @@ export function setTheme(theme: Theme) {
     return;
   }
   root.classList.add("theme-switching");
-  doc
-    .startViewTransition(() => applyTheme(theme))
-    .finished.finally(() => root.classList.remove("theme-switching"));
+  let scan: Animation[] = [];
+  const transition = doc.startViewTransition(() => applyTheme(theme));
+  transition.ready.then(() => (scan = playThemeScan()), () => {});
+  transition.finished.finally(() => {
+    scan.forEach((a) => a.cancel()); // their pseudo-elements are gone; don't let them pile up
+    root.classList.remove("theme-switching");
+  });
 }
 
 export function onThemeChange(handler: (theme: Theme) => void) {

@@ -8,15 +8,22 @@ const SRC = "/profile-photo.jpg";
 const W = 132; // dither resolution (3:4)
 const H = 176;
 const SCALE = 2; // canvas is drawn at 2× the dither grid
-const IN_MS = 620; // reveal is slower in…
-const OUT_MS = 300; // …than out
+const CW = W * SCALE;
+const CH = H * SCALE;
+const IN_MS = 1000; // lock on and reveal…
+const OUT_MS = 380; // …release faster
+
+// Where the face sits in the cropped frame, and the box the brackets lock onto (fractions).
+const FACE = { x: 0.47, y: 0.44, w: 0.42, h: 0.36 };
+const LOCK = 0.32; // share of the reveal spent locking on
+const DOT = 8; // halftone grid spacing, in canvas px
+const BAND = 44; // width of the halftone edge
 
 // 4×4 Bayer matrix, normalised to 0..1
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
-// Pixel sizes the photo resolves through, coarse → sharp
-const RESOLVE_STEPS = [16, 11, 8, 6, 4, 3, 2, 1];
 
 type RGB = [number, number, number];
+type Layers = { dither: HTMLCanvasElement; photo: HTMLCanvasElement; mask: HTMLCanvasElement; masked: HTMLCanvasElement };
 
 function cssColor(name: string): RGB {
   const hex = getComputedStyle(document.documentElement).getPropertyValue(name).trim().replace("#", "");
@@ -24,7 +31,10 @@ function cssColor(name: string): RGB {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Source rectangle that cover-crops the photo to 3:4, biased towards the face. */
 function coverCrop(img: HTMLImageElement) {
@@ -37,6 +47,13 @@ function coverCrop(img: HTMLImageElement) {
   return { sx: 0, sy: (img.height - sh) * 0.3, sw: img.width, sh };
 }
 
+const layer = () => {
+  const c = document.createElement("canvas");
+  c.width = CW;
+  c.height = CH;
+  return c;
+};
+
 export function PhotoFrame() {
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
   const [revealed, setRevealed] = useState(false);
@@ -44,97 +61,129 @@ export function PhotoFrame() {
   const photoRef = useRef<HTMLImageElement>(null);
 
   // Animation state lives in refs so the rAF loop never re-renders React.
-  const img = useRef<HTMLImageElement | null>(null);
   const lum = useRef<Float32Array | null>(null); // normalised luminance at W×H
   const progress = useRef(0); // 0 = dithered portrait, 1 = photo
   const target = useRef(0);
   const raf = useRef(0);
-  const offscreen = useRef<HTMLCanvasElement | null>(null);
+  // cached layers: the dithered portrait, the photo, and scratch space for the masked photo
+  const layers = useRef<Layers | null>(null);
 
-  /** Draw the ordered dither at a given block size (1 = finest). */
-  const drawDither = (ctx: CanvasRenderingContext2D, block: number) => {
+  /** Draw the ordered-dither portrait (theme colours) into the dither layer. */
+  const paintDither = () => {
     const l = lum.current;
-    if (!l) return;
+    const L = layers.current;
+    if (!l || !L) return;
+    const ctx = L.dither.getContext("2d")!;
     const light = document.documentElement.dataset.theme === "light";
     const paper = cssColor("--bg-sunken");
     // Quiet ink: mixed towards the paper so the portrait reads as texture.
     const full = cssColor(light ? "--fg" : "--red");
     const mix = light ? 0.8 : 0.62;
     const ink = full.map((v, i) => Math.round(paper[i] + (v - paper[i]) * mix)) as RGB;
-
     ctx.fillStyle = `rgb(${paper.join(",")})`;
-    ctx.fillRect(0, 0, W * SCALE, H * SCALE);
+    ctx.fillRect(0, 0, CW, CH);
     ctx.fillStyle = `rgb(${ink.join(",")})`;
-    for (let by = 0; by < H; by += block) {
-      for (let bx = 0; bx < W; bx += block) {
-        // average luminance of the block
-        let sum = 0, n = 0;
-        for (let y = by; y < Math.min(by + block, H); y++)
-          for (let x = bx; x < Math.min(bx + block, W); x++) {
-            sum += l[y * W + x];
-            n++;
-          }
-        let v = Math.pow(sum / n, light ? 1.4 : 2.3);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let v = Math.pow(l[y * W + x], light ? 1.4 : 2.3);
         if (light) v = 1 - v; // dark ink on paper: shadows get the dots
-        const cellX = bx / block, cellY = by / block;
-        if (v > BAYER[(cellY % 4) * 4 + (cellX % 4)]) {
-          ctx.fillRect(bx * SCALE, by * SCALE, block * SCALE, block * SCALE);
-        }
+        if (v > BAYER[(y % 4) * 4 + (x % 4)]) ctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
       }
     }
-  };
-
-  /** Draw the real photo pixelated to `block` dither cells. */
-  const drawPixelated = (ctx: CanvasRenderingContext2D, block: number) => {
-    const image = img.current;
-    if (!image) return;
-    const off = (offscreen.current ??= document.createElement("canvas"));
-    const w = block === 1 ? W * SCALE : Math.max(1, Math.round(W / block));
-    const h = Math.max(1, Math.round((w * H) / W));
-    off.width = w;
-    off.height = h;
-    const octx = off.getContext("2d")!;
-    const { sx, sy, sw, sh } = coverCrop(image);
-    octx.imageSmoothingEnabled = true;
-    octx.drawImage(image, sx, sy, sw, sh, 0, 0, w, h);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(off, 0, 0, w, h, 0, 0, W * SCALE, H * SCALE);
   };
 
   /**
-   * One frame of the reveal.
-   *   0.00–0.18  dither scrambles into coarse blocks
-   *   0.18–1.00  photo resolves 16px → 1px, a red scan line sweeps down
-   *   1.00       crisp <img> fades in on top
+   * One frame of the reveal ("lock-on").
+   *   0 → LOCK   brackets close in from the frame corners onto the face, a crosshair appears,
+   *              and they flicker as they lock
+   *   LOCK → 1   the photo opens outward from the face; its edge is a ring of halftone dots that
+   *              swell into the photo, with a faint red scan ring; the brackets fade
+   *   1          the crisp <img> takes over
    */
   const render = (p: number) => {
     const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    if (p < 0.18) {
-      const t = p / 0.18;
-      drawDither(ctx, Math.max(1, Math.round(1 + t * 5)));
-    } else {
-      const t = easeOut((p - 0.18) / 0.82);
-      const step = RESOLVE_STEPS[Math.min(RESOLVE_STEPS.length - 1, Math.floor(t * RESOLVE_STEPS.length))];
-      drawPixelated(ctx, step);
-      // Colour arrives with resolution: coarse pixels start in the theme's ink hue.
-      const tint = Math.max(0, 1 - t / 0.65);
-      if (tint > 0) {
-        const light = document.documentElement.dataset.theme === "light";
-        ctx.globalCompositeOperation = "color";
-        ctx.globalAlpha = tint;
-        ctx.fillStyle = `rgb(${cssColor(light ? "--fg" : "--red").join(",")})`;
-        ctx.fillRect(0, 0, W * SCALE, H * SCALE);
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = 1;
+    const L = layers.current;
+    if (!ctx || !L) return;
+    const red = cssColor("--red").join(",");
+    const fx = FACE.x * CW;
+    const fy = FACE.y * CH;
+
+    ctx.drawImage(L.dither, 0, 0);
+
+    // ── the reveal: a solid disc plus halftone dots, used as a mask over the photo
+    const open = easeInOut(clamp01((p - LOCK) / (1 - LOCK)));
+    if (open > 0) {
+      const far = Math.max(Math.hypot(fx, fy), Math.hypot(CW - fx, fy), Math.hypot(fx, CH - fy), Math.hypot(CW - fx, CH - fy));
+      const r = open * (far + BAND);
+      const m = L.mask.getContext("2d")!;
+      m.clearRect(0, 0, CW, CH);
+      m.fillStyle = "#000";
+      if (r > BAND) {
+        m.beginPath();
+        m.arc(fx, fy, r - BAND, 0, Math.PI * 2);
+        m.fill();
       }
+      // halftone edge: dots grow from nothing at the outer edge to touching at the inner edge
+      m.beginPath();
+      for (let gy = DOT / 2; gy < CH; gy += DOT) {
+        for (let gx = DOT / 2; gx < CW; gx += DOT) {
+          const d = Math.hypot(gx - fx, gy - fy);
+          if (d > r || d < r - BAND) continue;
+          const rad = ((r - d) / BAND) * DOT * 0.75;
+          if (rad < 0.4) continue;
+          m.moveTo(gx + rad, gy);
+          m.arc(gx, gy, rad, 0, Math.PI * 2);
+        }
+      }
+      m.fill();
+
+      const k = L.masked.getContext("2d")!;
+      k.globalCompositeOperation = "source-over";
+      k.clearRect(0, 0, CW, CH);
+      k.drawImage(L.photo, 0, 0);
+      k.globalCompositeOperation = "destination-in";
+      k.drawImage(L.mask, 0, 0);
+      ctx.drawImage(L.masked, 0, 0);
+
+      // faint red scan ring riding the edge
       if (p < 0.98) {
-        const red = cssColor("--red");
-        const y = Math.round(t * H * SCALE);
-        ctx.fillStyle = `rgba(${red.join(",")},0.55)`;
-        ctx.fillRect(0, y, W * SCALE, SCALE);
+        ctx.strokeStyle = `rgba(${red},${0.55 * (1 - open)})`;
+        ctx.lineWidth = SCALE;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.stroke();
       }
     }
+
+    // ── lock-on brackets: from the frame corners onto the face box
+    const close = easeOut(clamp01(p / LOCK));
+    const alpha = clamp01(p / 0.08) * (1 - clamp01((p - 0.7) / 0.25));
+    const flicker = p > LOCK && p < LOCK + 0.07 && Math.floor(p * 140) % 2 === 0;
+    if (alpha > 0 && !flicker) {
+      const inset = 7;
+      const bx0 = lerp(inset, fx - (FACE.w * CW) / 2, close);
+      const by0 = lerp(inset, fy - (FACE.h * CH) / 2, close);
+      const bx1 = lerp(CW - inset, fx + (FACE.w * CW) / 2, close);
+      const by1 = lerp(CH - inset, fy + (FACE.h * CH) / 2, close);
+      const arm = lerp(22, 14, close);
+      const t = SCALE;
+      ctx.fillStyle = `rgba(${red},${alpha})`;
+      const corners: [number, number, number, number][] = [[bx0, by0, 1, 1], [bx1, by0, -1, 1], [bx0, by1, 1, -1], [bx1, by1, -1, -1]];
+      for (const [x, y, sx, sy] of corners) {
+        ctx.fillRect(sx > 0 ? x : x - arm, sy > 0 ? y : y - t, arm, t);
+        ctx.fillRect(sx > 0 ? x : x - t, sy > 0 ? y : y - arm, t, arm);
+      }
+      // crosshair on the face while locking
+      const cross = clamp01((p - 0.14) / 0.1) * (1 - clamp01((p - LOCK - 0.12) / 0.12));
+      if (cross > 0) {
+        ctx.fillStyle = `rgba(${red},${alpha * cross})`;
+        ctx.fillRect(fx - 7, fy - t / 2, 5, t);
+        ctx.fillRect(fx + 2, fy - t / 2, 5, t);
+        ctx.fillRect(fx - t / 2, fy - 7, t, 5);
+        ctx.fillRect(fx - t / 2, fy + 2, t, 5);
+      }
+    }
+
     if (photoRef.current) photoRef.current.style.opacity = p >= 0.99 ? "1" : "0";
   };
 
@@ -166,7 +215,6 @@ export function PhotoFrame() {
   useEffect(() => {
     const image = new Image();
     image.onload = () => {
-      img.current = image;
       // luminance at the dither grid, normalised with a contrast stretch
       const c = document.createElement("canvas");
       c.width = W;
@@ -185,6 +233,13 @@ export function PhotoFrame() {
       }
       for (let i = 0; i < out.length; i++) out[i] = (out[i] - min) / Math.max(1, max - min);
       lum.current = out;
+
+      const L: Layers = { dither: layer(), photo: layer(), mask: layer(), masked: layer() };
+      const pctx = L.photo.getContext("2d")!;
+      pctx.imageSmoothingEnabled = true;
+      pctx.drawImage(image, sx, sy, sw, sh, 0, 0, CW, CH);
+      layers.current = L;
+      paintDither();
       render(progress.current);
       setStatus("ready");
     };
@@ -192,7 +247,12 @@ export function PhotoFrame() {
     image.src = SRC;
 
     // Redraw in the new colours when the theme changes (after the CSS vars update).
-    const off = onThemeChange(() => requestAnimationFrame(() => render(progress.current)));
+    const off = onThemeChange(() =>
+      requestAnimationFrame(() => {
+        paintDither();
+        render(progress.current);
+      })
+    );
     return () => {
       off();
       cancelAnimationFrame(raf.current);
@@ -215,12 +275,12 @@ export function PhotoFrame() {
           <>
             <canvas
               ref={canvasRef}
-              width={W * SCALE}
-              height={H * SCALE}
+              width={CW}
+              height={CH}
               className="absolute inset-0 w-full h-full [image-rendering:pixelated]"
               aria-hidden
             />
-            {/* Crisp photo takes over once the resolve reaches full resolution. */}
+            {/* Crisp photo takes over once the reveal completes. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={photoRef}
@@ -229,6 +289,15 @@ export function PhotoFrame() {
               className="absolute inset-0 w-full h-full object-cover object-[50%_30%] transition-opacity duration-150"
               style={{ opacity: 0 }}
             />
+            {/* the lock-on's last beat */}
+            <span
+              className={`absolute left-2 bottom-2 label px-1.5 py-0.5 bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] transition-opacity ${
+                revealed ? "opacity-100 duration-200 delay-[850ms]" : "opacity-0 duration-100"
+              }`}
+              aria-hidden
+            >
+              <span className="text-[var(--red)]">検</span> · verified
+            </span>
           </>
         )}
       </button>

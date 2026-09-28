@@ -1,7 +1,7 @@
 // Menu sounds, synthesised with Web Audio (no audio files).
 // Always starts muted on every visit; the visitor turns it on from the header or `sound on`.
 
-export type Cue = "hover" | "select" | "back" | "on" | "sweep-light" | "sweep-dark";
+export type Cue = "hover" | "select" | "back" | "on" | "step" | "sweep-light" | "sweep-dark";
 
 const EVENT = "ken:sound";
 const VOLUME = 0.5; // master; individual cues are already quiet
@@ -132,6 +132,11 @@ export function play(cue: Cue) {
       thump(t, 110, 0.12, 0.03);
       break;
     }
+    case "step":
+      // a soft footfall on the server room's metal floor
+      thump(t, 150, 0.06, 0.035);
+      air(t, 1500, 5000, 0.03, 0.012);
+      break;
     case "select":
       ring(t, 1400, 0.6, 0.075);
       air(t, 600, 6000, 0.3, 0.06);
@@ -149,15 +154,21 @@ export function play(cue: Cue) {
       thump(t, 95, 0.75, 0.24);
       ring(t + 0.09, 2100, 0.35, 0.03);
       break;
+    // Timed to the ~1.6 s "screen breaks" transition: crackles while it tears, a low hit as
+    // the new theme spreads, a small metal tick when it settles.
     case "sweep-light":
-      air(t, 700, 6500, 0.65, 0.07);
-      thump(t, 90, 1, 0.22);
-      ring(t, 1700, 0.8, 0.03);
+    case "sweep-dark": {
+      const light = cue === "sweep-light";
+      for (let i = 0; i < 6; i++) {
+        const at = t + 0.03 + Math.random() * 0.45;
+        air(at, 2500, 9000, 0.03 + Math.random() * 0.04, 0.05);
+        if (Math.random() < 0.4) ring(at, 1800 + Math.random() * 1200, 0.08, 0.015);
+      }
+      air(t + 0.48, light ? 700 : 500, light ? 6500 : 4500, 0.9, 0.07);
+      thump(t + 0.48, light ? 90 : 72, 1.1, 0.24);
+      ring(t + 0.48, light ? 1700 : 1100, 0.9, 0.03, light ? 9000 : 5000);
+      ring(t + 1.4, light ? 2200 : 1600, 0.2, 0.02);
       break;
-    case "sweep-dark":
-      air(t, 500, 4500, 0.65, 0.07);
-      thump(t, 72, 1.1, 0.26);
-      ring(t, 1100, 0.9, 0.03, 5000);
-      break;
+    }
   }
 }

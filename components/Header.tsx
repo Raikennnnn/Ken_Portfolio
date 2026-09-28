@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import { toggleTerminal } from "@/lib/terminalBus";
 import { ThemeToggle } from "./ThemeToggle";
 import { SoundToggle } from "./Sound";
+import { DiamondMenu } from "./DiamondMenu";
 import { pad2 } from "@/lib/format";
 
 const NAV = [
+  { id: "about", label: "About" },
+  { id: "experience", label: "Experience" },
   { id: "work", label: "Work" },
   { id: "security", label: "Security" },
-  { id: "ctf", label: "Break it" },
+  { id: "credentials", label: "Credentials" },
   { id: "skills", label: "Skills" },
-  { id: "about", label: "About" },
+  { id: "ctf", label: "Break it" },
   { id: "contact", label: "Contact" },
 ];
 
@@ -58,7 +61,11 @@ export function Header() {
           : "border-b border-transparent"
       }`}
     >
-      <div className="mx-auto max-w-[1120px] px-5 md:px-8 h-16 flex items-center gap-6">
+      <div className="mx-auto max-w-[1120px] px-5 md:px-8 h-16 flex items-center gap-4 md:gap-5">
+        {/* desktop: the diamond menu; phones keep the list menu (right) for now */}
+        <div className="hidden md:block">
+          <DiamondMenu sections={NAV} active={active} />
+        </div>
         <a href="#top" className="flex items-center gap-3 shrink-0" aria-label="Ken — back to top">
           <span
             className="kanji w-8 h-8 grid place-items-center border border-[var(--red-line)] text-[var(--red)] text-[15px] tracking-normal"
@@ -73,32 +80,12 @@ export function Header() {
           </span>
         </a>
 
-        <nav className="hidden lg:flex items-center gap-1 mx-auto" aria-label="Sections">
-          {NAV.map((item, i) => {
-            const current = active === item.id;
-            return (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                aria-current={current ? "true" : undefined}
-                className={`group flex items-baseline gap-1.5 px-3 py-1.5 text-[13px] transition-colors ${
-                  current ? "text-[var(--fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
-                }`}
-              >
-                <span className={`font-mono text-[10px] ${current ? "text-[var(--red)]" : "text-[var(--fg-dim)]"}`}>
-                  {pad2(i + 1)}
-                </span>
-                {item.label}
-              </a>
-            );
-          })}
-        </nav>
 
-        <div className="flex items-center gap-2 ml-auto lg:ml-0">
+        <div className="flex items-center gap-2 ml-auto">
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="btn w-9 justify-center px-0 lg:hidden"
+            className="btn w-9 justify-center px-0 md:hidden"
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
             aria-label={menuOpen ? "Close sections menu" : "Open sections menu"}
@@ -112,7 +99,7 @@ export function Header() {
           <button type="button" onClick={() => toggleTerminal(true)} className="btn" aria-label="Open terminal (Ctrl+K)">
             <span className="text-[var(--red)]">&gt;_</span>
             <span className="hidden sm:inline">Terminal</span>
-            <kbd className="kbd hidden md:inline-flex">Ctrl K</kbd>
+            <kbd className="kbd hidden 2xl:inline-flex">Ctrl K</kbd>
           </button>
         </div>
       </div>
@@ -121,7 +108,7 @@ export function Header() {
         <nav
           id="mobile-nav"
           aria-label="Sections"
-          className="lg:hidden border-t border-[var(--line)] bg-[var(--bg)] mx-auto max-w-[1120px] px-5 md:px-8 py-2"
+          className="md:hidden border-t border-[var(--line)] bg-[var(--bg)] mx-auto max-w-[1120px] px-5 md:px-8 py-2"
         >
           {NAV.map((item, i) => {
             const current = active === item.id;

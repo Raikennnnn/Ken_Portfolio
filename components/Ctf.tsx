@@ -45,7 +45,7 @@ export function Ctf() {
 
   return (
     <section id="ctf" ref={ref} className="py-20 md:py-28 scroll-mt-16">
-      <SectionHeader index="03" title="Break this site" />
+      <SectionHeader index="07" title="Break this site" />
 
       <p className="-mt-4 mb-12 max-w-[600px] text-[0.97rem] leading-[1.75] text-[var(--fg-muted)]">
         I hid five flags in this site, in the places I check first when I test a system. You only need

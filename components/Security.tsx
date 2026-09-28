@@ -70,7 +70,7 @@ export function Security() {
 
   return (
     <section id="security" ref={ref} className="py-20 md:py-28 scroll-mt-16">
-      <SectionHeader index="02" title="Security testing" />
+      <SectionHeader index="04" title="Security testing" />
 
       <p className="-mt-4 mb-10 max-w-[560px] text-[0.97rem] leading-[1.75] text-[var(--fg-muted)]">
         Systems I have tested, with permission: the scope, the tools and the checks.

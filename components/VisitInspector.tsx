@@ -59,7 +59,7 @@ export function VisitInspector() {
       { label: "Browser", value: `${browserOf(ua)} · ${osOf(ua)}` },
       { label: "Language", value: navigator.language },
       { label: "Timezone", value: tz },
-      { label: "Screen", value: `${screen.width}×${screen.height} · ${Math.round(devicePixelRatio * 100) / 100}x${navigator.maxTouchPoints > 0 ? " · touch" : ""}` },
+      { label: "Screen", value: `${screen.width || innerWidth}×${screen.height || innerHeight} · ${Math.round(devicePixelRatio * 100) / 100}x${navigator.maxTouchPoints > 0 ? " · touch" : ""}` },
       { label: "Came from", value: referrerOf() },
       { label: "Connection", value: location.protocol === "https:" ? "HTTPS" : "HTTP (local dev)" },
       { label: "Session", value: admin ? `${session.user} · role: admin` : `${session.user} · role: ${session.role}`, accent: admin },

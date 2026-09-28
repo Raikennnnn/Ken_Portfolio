@@ -14,7 +14,7 @@ export function Contact() {
 
   return (
     <section id="contact" ref={ref} className="pt-20 md:pt-28 scroll-mt-16">
-      <SectionHeader index="06" title="Contact" />
+      <SectionHeader index="08" title="Contact" />
 
       <div className={`reveal ${inView ? "in" : ""} grid md:grid-cols-[1.2fr_1fr] gap-10 md:gap-14`}>
         <div>

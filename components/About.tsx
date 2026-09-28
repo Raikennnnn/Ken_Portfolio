@@ -1,6 +1,6 @@
 "use client";
 
-import { profile, certifications } from "@/content/data";
+import { profile } from "@/content/data";
 import { useInView } from "@/lib/useInView";
 import { PhotoFrame } from "./PhotoFrame";
 import { SectionHeader } from "./SectionHeader";
@@ -10,7 +10,7 @@ export function About() {
 
   return (
     <section id="about" ref={ref} className="py-20 md:py-28 scroll-mt-16">
-      <SectionHeader index="05" title="About" />
+      <SectionHeader index="01" title="About" />
 
       <div className={`reveal ${inView ? "in" : ""} grid md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr_240px] gap-10 lg:gap-12`}>
         <PhotoFrame />
@@ -31,26 +31,6 @@ export function About() {
         </dl>
       </div>
 
-      {certifications.length > 0 && (
-        <div className="mt-16">
-          <div className="label mb-4">Certifications</div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {certifications.map((c) => (
-              <div key={c.name} className="panel p-5">
-                <div className="font-serif font-medium">{c.name}</div>
-                <div className="label mt-1.5">
-                  {c.issuer} · {c.year}
-                </div>
-                {c.verifyUrl && (
-                  <a href={c.verifyUrl} target="_blank" rel="noreferrer" className="link inline-block mt-3 text-[0.85rem]">
-                    Verify ↗
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </section>
   );
 }

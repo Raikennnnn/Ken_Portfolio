@@ -25,14 +25,30 @@ export type SocialLink = {
 
 export type Skill = {
   name: string;
-  category: "language" | "framework" | "practice" | "tool";
+  category: "language" | "framework" | "practice" | "tool" | "ai";
 };
 
 export type Certification = {
   name: string;
   issuer: string;
+  /** Issue date as shown on the badge, e.g. "Jul 2025" */
+  date: string;
+  /** "exam" = passed a certification exam; the others are course-completion badges. */
+  group: "exam" | "security" | "networking";
+  /** Public Credly link (credly.com/badges/<id>, not the earner "share" link). */
+  verifyUrl: string;
+  expires?: string;
+  /** Skill names this certification is evidence for. */
+  skills?: string[];
+};
+
+export type Experience = {
+  role: string;
+  org: string;
   year: string;
-  verifyUrl?: string;
+  points: string[];
+  /** In-page links to the matching project / assessment */
+  links: { label: string; href: string }[];
 };
 
 export type Writeup = {
@@ -148,6 +164,7 @@ export const skillGroups: { key: Skill["category"]; label: string }[] = [
   { key: "framework", label: "Frameworks & platforms" },
   { key: "practice", label: "Security practice" },
   { key: "tool", label: "Testing tools" },
+  { key: "ai", label: "AI tools" },
 ];
 
 export const skills: Skill[] = [
@@ -172,6 +189,10 @@ export const skills: Skill[] = [
   { name: "Burp Suite", category: "tool" },
   { name: "Postman", category: "tool" },
   { name: "Chrome DevTools", category: "tool" },
+  // AI tools used while building (listed openly)
+  { name: "Claude Code", category: "ai" },
+  { name: "Codex", category: "ai" },
+  { name: "Gemini", category: "ai" },
 ];
 
 export const projects: Project[] = [
@@ -215,7 +236,7 @@ export const projects: Project[] = [
     title: "Ken Portfolio",
     year: "2026",
     role: "Design + Dev",
-    stack: ["TypeScript", "Next.js", "React", "Tailwind CSS", "Secure headers / CSP"],
+    stack: ["TypeScript", "Next.js", "React", "Tailwind CSS", "Secure headers / CSP", "Claude Code"],
     summary:
       "This site. It inspects your visit, hides a five-flag capture-the-flag, and has a working terminal (Ctrl+K).",
     security: [
@@ -228,8 +249,102 @@ export const projects: Project[] = [
   },
 ];
 
-// Add entries and a section appears automatically. Keep them real — link the verify page.
-export const certifications: Certification[] = [];
+// Only real roles. One entry is fine; don't pad it.
+export const experience: Experience[] = [
+  {
+    role: "Developer, then security tester & QA",
+    org: "IntelliDocs capstone team · FEU Institute of Technology",
+    year: "2026",
+    points: [
+      "Built the first version of IntelliDocs, our enrollment system with AI-assisted document verification, then handed development to a teammate.",
+      "Became the team's security tester and QA: tested the web app and its API with Burp Suite, OWASP ZAP, Postman and Chrome DevTools.",
+      "Reported issues to the developer and suggested what to change or keep; they were fixed and hardened.",
+    ],
+    links: [
+      { label: "Project", href: "#work" },
+      { label: "Security assessment", href: "#security" },
+    ],
+  },
+];
+
+// Every entry is verifiable on Credly. "exam" entries are certifications earned by passing an exam.
+// The Cisco Networking Academy entries are course completions: never label them "CCNA certified"
+// (that is a separate exam).
+export const certifications: Certification[] = [
+  {
+    name: "Cisco Certified Support Technician (CCST) Networking",
+    issuer: "Cisco",
+    date: "Feb 2025",
+    group: "exam",
+    verifyUrl: "https://www.credly.com/badges/d43ef14e-8225-4c23-8e49-91def5441079",
+  },
+  {
+    name: "IT Specialist – Python",
+    issuer: "Certiport (Pearson VUE)",
+    date: "Feb 2025",
+    group: "exam",
+    verifyUrl: "https://www.credly.com/badges/76719a57-398b-440a-b5a2-25b1dd37d896",
+    skills: ["Python"],
+  },
+  {
+    name: "IT Specialist – Databases",
+    issuer: "Certiport (Pearson VUE)",
+    date: "Nov 2024",
+    group: "exam",
+    verifyUrl: "https://www.credly.com/badges/1dbd4e43-47bd-408b-8218-ba82bb45da0d",
+    skills: ["MySQL"],
+  },
+  {
+    name: "PMI Project Management Ready™",
+    issuer: "Project Management Institute",
+    date: "Mar 2026",
+    group: "exam",
+    verifyUrl: "https://www.credly.com/badges/e3bf8577-7aee-429e-9384-3dd3eeabcd7d",
+    expires: "Mar 2031",
+  },
+  {
+    name: "Ethical Hacker",
+    issuer: "Cisco Networking Academy",
+    date: "Jul 2025",
+    group: "security",
+    verifyUrl: "https://www.credly.com/badges/f0f86217-9c3d-48e2-82e7-f6ee6fc973e9",
+  },
+  {
+    name: "Introduction to Cybersecurity",
+    issuer: "Cisco Networking Academy",
+    date: "Mar 2025",
+    group: "security",
+    verifyUrl: "https://www.credly.com/badges/ec63feed-1a0b-4ea5-a18b-f8c73be77356",
+  },
+  {
+    name: "Network Defense",
+    issuer: "Cisco Networking Academy",
+    date: "Mar 2025",
+    group: "security",
+    verifyUrl: "https://www.credly.com/badges/4d60ce2c-9e6a-4669-9abd-f6c40464d0a5",
+  },
+  {
+    name: "CCNA: Introduction to Networks",
+    issuer: "Cisco Networking Academy",
+    date: "Dec 2024",
+    group: "networking",
+    verifyUrl: "https://www.credly.com/badges/1fe29082-91bd-43d7-929d-d1c51f02ee92",
+  },
+  {
+    name: "CCNA: Switching, Routing, and Wireless Essentials",
+    issuer: "Cisco Networking Academy",
+    date: "Mar 2025",
+    group: "networking",
+    verifyUrl: "https://www.credly.com/badges/abac81f1-ea01-4eb6-8da1-fe78206d28d7",
+  },
+  {
+    name: "CCNA: Enterprise Networking, Security, and Automation",
+    issuer: "Cisco Networking Academy",
+    date: "Jan 2026",
+    group: "networking",
+    verifyUrl: "https://www.credly.com/badges/97de4bcf-3942-4ba2-88b3-0d99d0720bb8",
+  },
+];
 
 // Lab notes and findings from your own testing.
 export const writeups: Writeup[] = [];
@@ -256,5 +371,8 @@ export function evidenceFor(skill: string): Evidence[] {
   const tested = assessments
     .filter((a) => (a.tools as string[]).includes(skill))
     .map((a) => ({ label: `${a.target} assessment`, href: "#security", external: false }));
-  return [...built, ...tested];
+  const certified = certifications
+    .filter((c) => c.skills?.includes(skill))
+    .map((c) => ({ label: c.name, href: c.verifyUrl, external: true }));
+  return [...built, ...tested, ...certified];
 }

@@ -2,6 +2,7 @@
 
 import { profile } from "@/content/data";
 import { toggleTerminal } from "@/lib/terminalBus";
+import { openRoom } from "@/lib/roomBus";
 import { VisitInspector } from "./VisitInspector";
 import { Rain } from "./Rain";
 
@@ -50,6 +51,9 @@ export function Hero() {
           <button type="button" onClick={() => toggleTerminal(true)} className="btn">
             <span className="text-[var(--red)]">&gt;_</span> Open terminal
             <kbd className="kbd hidden sm:inline-flex">Ctrl K</kbd>
+          </button>
+          <button type="button" onClick={openRoom} className="btn">
+            <span className="kanji text-[var(--red)] tracking-normal" lang="ja">検</span> Enter the server room
           </button>
         </div>
       </div>
