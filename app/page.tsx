@@ -13,6 +13,7 @@ import { SoundEffects } from "@/components/Sound";
 import { Room } from "@/components/Room";
 import { profile, projects } from "@/content/data";
 import { getRepos, timeAgo } from "@/lib/github";
+import { getHoneypotSummary } from "@/lib/honeypot";
 
 // Re-render at most hourly so the GitHub data stays fresh.
 export const revalidate = 3600;
@@ -20,7 +21,12 @@ export const revalidate = 3600;
 const key = (url: string) => url.toLowerCase().replace(/\/$/, "");
 
 export default async function Page() {
-  const repos = (await getRepos(profile.github)) ?? [];
+  const [repoList, honeypot] = await Promise.all([
+    getRepos(profile.github),
+    projects.some((p) => p.live === "honeypot") ? getHoneypotSummary() : null,
+  ]);
+  const repos = repoList ?? [];
+  const live = { honeypot, honeypotUpdated: honeypot ? timeAgo(honeypot.generatedAt) : undefined };
   const projectRepos = new Set(projects.flatMap((p) => (p.repo ? [key(p.repo)] : [])));
 
   // Formatted here so server and client render the same text.
@@ -38,7 +44,7 @@ export default async function Page() {
         <Hero />
         <About />
         <Experience />
-        <Work lastPush={lastPush} others={others} />
+        <Work lastPush={lastPush} others={others} live={live} />
         <Security />
         <Credentials />
         <Skills />
