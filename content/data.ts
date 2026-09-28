@@ -53,7 +53,7 @@ export const profile = {
   headlineAccent: "break.",
   // The intro is rendered as "I'm <fullName>, " + intro.
   intro:
-    "a BSIT Cybersecurity student. I build web apps and Roblox games, and I test them the way an attacker would.",
+    "a BSIT Cybersecurity student. I love finding something new on a website, so I build web apps that try to do things a little differently, then test them the way an attacker would.",
   bio: [
     "I'm a BSIT Cybersecurity student who wants to understand the real work behind cybersecurity: how systems get attacked, how they're defended, and what it takes to do that job well.",
     "I learn best by taking on challenges I'm not ready for yet. I'm willing to take a leap of faith, fail, and try again, because every mistake teaches me something a textbook can't.",
@@ -62,7 +62,7 @@ export const profile = {
   focus: [
     { label: "Stack", value: "TypeScript · React · PHP · Python" },
     { label: "Security", value: "Web security testing · Quality checking" },
-    { label: "Interests", value: "Game development · Creative coding" },
+    { label: "Interests", value: "Creative web experiences · Game dev (hobby)" },
   ],
   available: true,
 };
@@ -237,7 +237,7 @@ export const writeups: Writeup[] = [];
 export const meta = {
   siteTitle: "Kenneth Raichen B. Torres — Cybersecurity Portfolio",
   siteDescription:
-    "Kenneth Raichen B. Torres (Ken), BSIT Cybersecurity student. I build web apps and games, and test how they break.",
+    "Kenneth Raichen B. Torres (Ken), BSIT Cybersecurity student. I build creative web apps, then test how they break.",
 };
 
 /** Projects that list a given skill in their stack. */
