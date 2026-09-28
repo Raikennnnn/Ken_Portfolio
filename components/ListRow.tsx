@@ -12,7 +12,6 @@ export function ListRow({
   title,
   meta,
   year,
-  defaultOpen = false,
   children,
 }: {
   id: string;
@@ -20,10 +19,9 @@ export function ListRow({
   title: string;
   meta: string;
   year: string;
-  defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
   const panelId = `${id}-panel`;
 
   return (

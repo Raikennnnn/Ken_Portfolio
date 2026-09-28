@@ -6,9 +6,9 @@ import { SectionHeader } from "./SectionHeader";
 import { useInView } from "@/lib/useInView";
 import { pad2 } from "@/lib/format";
 
-function AssessmentRow({ a, defaultOpen }: { a: Assessment; defaultOpen: boolean }) {
+function AssessmentRow({ a }: { a: Assessment }) {
   return (
-    <ListRow id={`assessment-${a.index}`} index={a.index} title={a.target} meta={a.type} year={a.year} defaultOpen={defaultOpen}>
+    <ListRow id={`assessment-${a.index}`} index={a.index} title={a.target} meta={a.type} year={a.year}>
       <div className="grid md:grid-cols-2 gap-6 md:gap-10">
         <div>
           <p className="text-[0.97rem] leading-[1.75] text-[var(--fg-muted)]">{a.summary}</p>
@@ -77,8 +77,8 @@ export function Security() {
       </p>
 
       <div className={`reveal ${inView ? "in" : ""} border-t border-[var(--line)]`}>
-        {assessments.map((a, i) => (
-          <AssessmentRow key={a.index} a={a} defaultOpen={i === 0} />
+        {assessments.map((a) => (
+          <AssessmentRow key={a.index} a={a} />
         ))}
       </div>
     </section>

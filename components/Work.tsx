@@ -22,12 +22,11 @@ export function Work({ lastPush, others }: { lastPush: Record<string, string>; o
       <SectionHeader index="01" title="Selected work" />
 
       <div className={`reveal ${inView ? "in" : ""} border-t border-[var(--line)]`}>
-        {projects.map((p, i) => (
+        {projects.map((p) => (
           <ProjectRow
             key={p.index}
             project={p}
             lastPush={p.repo ? lastPush[p.repo.toLowerCase().replace(/\/$/, "")] : undefined}
-            defaultOpen={i === 0}
           />
         ))}
       </div>

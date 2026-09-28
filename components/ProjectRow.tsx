@@ -6,12 +6,10 @@ import { ListRow, NotesPanel, RepoLinks } from "./ListRow";
 export function ProjectRow({
   project,
   lastPush,
-  defaultOpen = false,
 }: {
   project: Project;
   /** e.g. "2w ago", from GitHub */
   lastPush?: string;
-  defaultOpen?: boolean;
 }) {
   return (
     <ListRow
@@ -20,7 +18,6 @@ export function ProjectRow({
       title={project.title}
       meta={project.role}
       year={project.year}
-      defaultOpen={defaultOpen}
     >
       <div className="grid md:grid-cols-2 gap-6 md:gap-10">
         <div>
