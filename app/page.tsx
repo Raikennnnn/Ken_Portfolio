@@ -7,6 +7,7 @@ import { Skills } from "@/components/Skills";
 import { About } from "@/components/About";
 import { Contact } from "@/components/Contact";
 import { Terminal } from "@/components/Terminal";
+import { SoundEffects } from "@/components/Sound";
 import { profile, projects } from "@/content/data";
 import { getRepos, timeAgo } from "@/lib/github";
 
@@ -40,6 +41,7 @@ export default async function Page() {
         <Contact />
       </main>
       <Terminal />
+      <SoundEffects />
     </>
   );
 }

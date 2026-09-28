@@ -6,6 +6,7 @@ import {
 } from "@/content/data";
 import { onToggleTerminal } from "@/lib/terminalBus";
 import { getTheme, setTheme } from "@/lib/theme";
+import { isSoundOn, setSound } from "@/lib/sound";
 import { FLAGS, NOTES_FILE, getSolved, submitFlag } from "@/lib/ctf";
 
 type Line = { id: number; node: ReactNode };
@@ -25,13 +26,14 @@ const HELP: [string, string][] = [
   ["github | linkedin | email", "open a link"],
   ["goto <section>", SECTIONS.join(" · ")],
   ["theme [dark|light]", "switch colour mode"],
+  ["sound [on|off]", "menu sounds (off by default)"],
   ["cat security.txt", "responsible disclosure"],
   ["clear | exit", "clear the screen / close (Esc)"],
 ];
 
 const COMMANDS = [
   "help", "whoami", "ls", "cat", "projects", "open", "security", "ctf", "submit", "skills", "contact", "github",
-  "linkedin", "email", "goto", "theme", "clear", "exit", "history", "date", "echo",
+  "linkedin", "email", "goto", "theme", "sound", "clear", "exit", "history", "date", "echo",
 ];
 
 const FILES = ["about.txt", "security.txt", "projects/", "skills.json"];
@@ -328,6 +330,13 @@ export function Terminal() {
         break;
       }
 
+      case "sound": {
+        const want = arg === "on" ? true : arg === "off" ? false : !isSoundOn();
+        setSound(want);
+        print(<Dim>sound → {want ? "on" : "off"}</Dim>);
+        break;
+      }
+
       case "theme": {
         const want = arg === "dark" || arg === "light" ? arg : getTheme() === "dark" ? "light" : "dark";
         setTheme(want);
@@ -374,6 +383,7 @@ export function Terminal() {
       cmd === "goto" ? SECTIONS
       : cmd === "cat" ? FILES
       : cmd === "theme" ? ["dark", "light"]
+      : cmd === "sound" ? ["on", "off"]
       : cmd === "open" ? projects.map((_, i) => String(i + 1))
       : cmd === "security" ? assessments.map((_, i) => String(i + 1))
       : [];

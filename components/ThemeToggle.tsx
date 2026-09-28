@@ -16,6 +16,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
+      data-sound="none"
       onClick={() => setTheme(next)}
       className="btn w-9 justify-center px-0"
       aria-label={`Switch to ${next} mode`}

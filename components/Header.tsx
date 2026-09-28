@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toggleTerminal } from "@/lib/terminalBus";
 import { ThemeToggle } from "./ThemeToggle";
+import { SoundToggle } from "./Sound";
 import { pad2 } from "@/lib/format";
 
 const NAV = [
@@ -106,6 +107,7 @@ export function Header() {
               {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
             </svg>
           </button>
+          <SoundToggle />
           <ThemeToggle />
           <button type="button" onClick={() => toggleTerminal(true)} className="btn" aria-label="Open terminal (Ctrl+K)">
             <span className="text-[var(--red)]">&gt;_</span>
