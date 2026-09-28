@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { onToggleTerminal } from "@/lib/terminalBus";
 import { openRoom } from "@/lib/roomBus";
+import { useKeyboardFit } from "@/lib/useKeyboardFit";
 import { Console } from "./Console";
 
 const CLOSE_MS = 220; // closing is quicker than opening
@@ -13,7 +14,7 @@ export function Terminal() {
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
   // Phones: fit the window into the visible area above the on-screen keyboard.
-  const [fit, setFit] = useState<{ top: number; height: number } | null>(null);
+  const fit = useKeyboardFit(open);
   const lastFocus = useRef<HTMLElement | null>(null);
 
   // Open / close from anywhere: header button, Ctrl/⌘+K, "/" or "`".
@@ -56,23 +57,6 @@ export function Terminal() {
     }, CLOSE_MS);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!open || !vv) return setFit(null);
-    const update = () => {
-      if (window.innerWidth >= 640) return setFit(null);
-      const gap = 10;
-      setFit({ top: vv.offsetTop + gap, height: Math.max(180, vv.height - gap * 2) });
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
   }, [open]);
 
   const goto = (id: string) => {

@@ -5,6 +5,7 @@ import { assessments, certifications, links, profile, projects, type Certificati
 import { FLAGS, getSolved, onSolvedChange, submitFlag } from "@/lib/ctf";
 import { pad2 } from "@/lib/format";
 import { makeSprites, readPalette } from "@/lib/room";
+import { useKeyboardFit } from "@/lib/useKeyboardFit";
 import { Console } from "./Console";
 
 // Everything you use inside the server room opens here, in the room, as a device screen.
@@ -12,8 +13,10 @@ import { Console } from "./Console";
 
 /** CRT-style device screen that powers on over the room. */
 function Screen({ id, title, onClose, children }: { id: string; title: string; onClose: () => void; children: ReactNode }) {
+  // phones: shrink to the space above the on-screen keyboard so inputs stay visible
+  const fit = useKeyboardFit(true);
   return (
-    <div className="room-screen" role="dialog" aria-label={title}>
+    <div className="room-screen" role="dialog" aria-label={title} style={fit ? { top: fit.top, height: fit.height, bottom: "auto" } : undefined}>
       <div className="flex items-center gap-3 px-4 h-9 border-b border-[var(--red-line)] shrink-0">
         <span className="w-1.5 h-1.5 bg-[var(--red)] animate-pulse" aria-hidden />
         <span className="label text-[var(--red)]">{id}</span>
