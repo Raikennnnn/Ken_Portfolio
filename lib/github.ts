@@ -39,7 +39,8 @@ export async function getRepos(user: string): Promise<RepoActivity[] | null> {
   if (!repos) return null;
 
   return repos
-    .filter((r) => !r.fork)
+    // repo links go straight into hrefs: only accept real GitHub URLs (never javascript: etc.)
+    .filter((r) => !r.fork && typeof r.html_url === "string" && r.html_url.startsWith("https://github.com/"))
     .map((r) => ({
       name: r.name,
       description: r.description,

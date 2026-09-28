@@ -35,6 +35,9 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The site never uses next/image; switching the optimiser off removes the /_next/image
+  // endpoint and its attack surface.
+  images: { unoptimized: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
