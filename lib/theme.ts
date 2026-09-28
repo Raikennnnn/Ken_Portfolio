@@ -11,7 +11,7 @@ export function getTheme(): Theme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
-export function setTheme(theme: Theme) {
+function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   try {
     localStorage.setItem(THEME_KEY, theme);
@@ -19,6 +19,30 @@ export function setTheme(theme: Theme) {
     // storage blocked (private mode) — the choice just won't persist
   }
   window.dispatchEvent(new CustomEvent<Theme>("ken:theme", { detail: theme }));
+}
+
+/**
+ * Switch theme with a top-to-bottom "scan": the new theme is revealed behind a red
+ * line (see .theme-scan in globals.css). Falls back to an instant switch where View
+ * Transitions aren't supported or motion is reduced.
+ */
+// View Transitions aren't in this TypeScript version's DOM types yet.
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (update: () => void) => { finished: Promise<void> };
+};
+
+export function setTheme(theme: Theme) {
+  const root = document.documentElement;
+  const doc = document as ViewTransitionDocument;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (theme === getTheme() || reduced || !doc.startViewTransition) {
+    applyTheme(theme);
+    return;
+  }
+  root.classList.add("theme-switching");
+  doc
+    .startViewTransition(() => applyTheme(theme))
+    .finished.finally(() => root.classList.remove("theme-switching"));
 }
 
 export function onThemeChange(handler: (theme: Theme) => void) {

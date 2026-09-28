@@ -291,6 +291,47 @@ body {
   border: 1px solid var(--line);
   cursor: pointer;
 }
+/* ── Theme switch: the new theme scans in from the top behind a red line ── */
+.theme-scan {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  z-index: 100;
+  pointer-events: none;
+  background: var(--red);
+  box-shadow: 0 0 10px 1px var(--red);
+  view-transition-name: theme-scan;
+}
+html.theme-switching .theme-scan { display: block; }
+/* colours jump inside the snapshot instead of fading underneath it */
+html.theme-switching, html.theme-switching * { transition: none !important; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: theme-reveal 0.7s var(--ease-out) both;
+}
+::view-transition-group(theme-scan) {
+  animation: theme-scan-move 0.7s var(--ease-out) both;
+}
+::view-transition-old(theme-scan) { display: none; }
+::view-transition-new(theme-scan) { animation: none; }
+@keyframes theme-reveal {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes theme-scan-move {
+  from { transform: translateY(0); opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translateY(100vh); opacity: 0; }
+}
+
 /* Copy for mouse vs. touch devices */
 .touch-only { display: none; }
 @media (hover: none) {

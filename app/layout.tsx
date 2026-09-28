@@ -38,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <div className="grid-bg" aria-hidden />
+        <div className="theme-scan" aria-hidden />
         <div className="relative z-10">{children}</div>
       </body>
     </html>
