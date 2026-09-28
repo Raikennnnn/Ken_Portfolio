@@ -23,7 +23,7 @@
   --red-line: rgba(220, 60, 60, 0.4);
   --on-red: #fff6f5;
   --scan: rgba(0, 0, 0, 0.18);
-  --font-serif: "Noto Serif JP", Georgia, "Times New Roman", serif;
+  --font-serif: "Shippori Mincho", Georgia, "Times New Roman", serif;
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
