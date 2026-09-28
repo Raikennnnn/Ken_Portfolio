@@ -253,12 +253,12 @@ const allProjects: Project[] = [
   },
   {
     index: "04",
-    title: "SSH Honeypot Threat Intel",
+    title: "Higanbana",
     year: "2026",
-    role: "Design + Dev · Blue team",
+    role: "SSH honeypot threat intel",
     stack: ["Python", "PostgreSQL", "Docker", "MITRE ATT&CK", "Threat modeling"],
     summary:
-      "A pipeline that turns SSH honeypot logs into explainable threat intel: it deduplicates Cowrie events, labels each session with rules mapped to MITRE ATT&CK, and publishes only aggregated numbers. It currently analyses the public CyberLab honeynet dataset (about 50 Cowrie honeypots, IPs pseudonymised by its authors). My own hardened sensor is built and firewall-tested, and goes live when I have cloud access.",
+      "Named after the red spider lily (彼岸花), planted around Japanese rice fields because its poisonous bulbs keep pests away. A pipeline that turns SSH honeypot logs into explainable threat intel: it deduplicates Cowrie events, labels each session with rules mapped to MITRE ATT&CK, and publishes only aggregated numbers. It currently analyses the public CyberLab honeynet dataset (about 50 Cowrie honeypots, IPs pseudonymised by its authors). My own hardened sensor is built and firewall-tested, and goes live when I have cloud access.",
     security: [
       "Every log line is treated as hostile: size limits, type checks, parameterised SQL only",
       "Public output is aggregates only, with no IPs, commands or URLs; a test checks that none leak into the export",
