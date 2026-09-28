@@ -27,8 +27,6 @@ browser and nothing is stored or sent.
 The terminal opens with `Ctrl/⌘ K`, `/` or the header button. Try `help`, `projects`,
 `open 1`, `security 1`, `certs`, `ctf`, `submit flag{...}`, `ls -a`, `goto about` or `theme light`.
 
-The old 3D companion is archived in `extras/ken3d-companion/` (not built with the site).
-
 ## Editing content
 
 All content is in `content/data.ts`. Only list things you have actually done.

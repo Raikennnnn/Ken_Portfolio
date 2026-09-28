@@ -18,8 +18,6 @@ export type Project = {
   repo?: string;
   /** Shows a live data block in the row (fetched server-side). */
   live?: "honeypot";
-  /** Not done yet: only shown when NEXT_PUBLIC_SHOW_DRAFTS=1 (local previews). */
-  draft?: boolean;
 };
 
 export type SocialLink = {
@@ -199,7 +197,7 @@ export const skills: Skill[] = [
   { name: "Gemini", category: "ai" },
 ];
 
-const allProjects: Project[] = [
+export const projects: Project[] = [
   {
     index: "01",
     title: "IntelliDocs",
@@ -269,10 +267,6 @@ const allProjects: Project[] = [
     live: "honeypot",
   },
 ];
-
-export const projects: Project[] = allProjects.filter(
-  (p) => !p.draft || process.env.NEXT_PUBLIC_SHOW_DRAFTS === "1",
-);
 
 // Only real roles. One entry is fine; don't pad it.
 export const experience: Experience[] = [

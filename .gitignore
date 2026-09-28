@@ -9,3 +9,6 @@ out
 next-env.d.ts.bak
 *.tsbuildinfo
 ui-reference/
+
+# Local only: tooling config and archived work, never published
+extras/
