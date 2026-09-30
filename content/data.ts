@@ -181,11 +181,14 @@ export const skills: Skill[] = [
   { name: "Tailwind CSS", category: "framework" },
   { name: "MySQL", category: "framework" },
   { name: "Roblox / Rojo", category: "framework" },
+  { name: "Firebase (Auth + Firestore)", category: "framework" },
+  { name: "Offline-first PWA", category: "framework" },
   // Security practice (visible in the code)
   { name: "Access control (RBAC)", category: "practice" },
   { name: "Audit logging", category: "practice" },
   { name: "Secure headers / CSP", category: "practice" },
   { name: "Server-authoritative design", category: "practice" },
+  { name: "Input validation", category: "practice" },
   // Testing tools
   { name: "OWASP ZAP", category: "tool" },
   { name: "Burp Suite", category: "tool" },
@@ -251,6 +254,27 @@ export const projects: Project[] = [
     ],
     repo: "https://github.com/Raikennnnn/Higanbana",
     live: "honeypot",
+  },
+  {
+    index: "04",
+    title: "Kinchaku",
+    year: "2026",
+    role: "Solo · Design + Dev",
+    stack: [
+      "TypeScript", "React", "Tailwind CSS", "Firebase (Auth + Firestore)", "Offline-first PWA",
+      "Input validation", "Secure headers / CSP", "Claude Code",
+    ],
+    summary:
+      "Named after the kinchaku (巾着), the drawstring coin purse. A free budget tracker for Android and iPhone: an installable web app that works fully offline, plus an Android APK built on every release. Money coming in fills the month's pot, spending takes from it, and what's left can carry over to the next month. It also has accounts, per-category budgets, savings goals, repeating entries and backups, and Koban, a lucky-cat helper that answers in English or Tagalog using rules in the browser, not a paid AI. Signing in syncs the same data across devices; each device keeps working offline and catches up once it's back online.",
+    security: [
+      "Firestore rules: each account reaches only its own records, and every write is checked for known tables, matching ids, size limits, a server timestamp and no extra fields",
+      "Everything from a backup file or from sync is validated before it's saved; unknown fields are dropped and far-future edit times are refused, so a planted record can't win every merge",
+      "Strict Content-Security-Policy: only the app itself and Google's sign-in and database endpoints can load, so no trackers or ad scripts",
+      "Sign-in cooldown after repeated failures, email verification and a delete-account option; signing out clears the device",
+      "The Android APK is signed in GitHub Actions with a key kept as a repository secret, never in the code",
+    ],
+    url: "https://kinchaku.vercel.app",
+    repo: "https://github.com/Raikennnnn/Kinchaku",
   },
 ];
 
