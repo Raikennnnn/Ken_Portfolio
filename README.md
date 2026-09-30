@@ -10,7 +10,7 @@ The hero panel inspects the visit (検, ken, means "to inspect"): browser, timez
 referrer, this site's security headers and the visitor's CTF progress. It all runs in the
 browser and nothing is stored or sent.
 
-1. About. Bio, and a dithered portrait that resolves into the photo on hover or tap.
+1. About. Bio, and the portrait: shown straight away, with a lock-on scan the first time it comes into view.
 2. Experience. Real roles only (`experience` in `content/data.ts`).
 3. Selected work. Each project lists the security decisions in its code, plus its last
    push from GitHub. Public repos that aren't listed as projects show up under "Other repositories".

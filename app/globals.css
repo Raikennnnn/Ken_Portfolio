@@ -292,7 +292,6 @@ body {
   overflow: hidden;
   background: var(--bg-sunken);
   border: 1px solid var(--line);
-  cursor: pointer;
 }
 /* ── Theme switch, staged like a game menu opening: a red line draws out from the centre,
    splits in two and the new theme opens between the lines with dithered edges.
